@@ -7,3 +7,144 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
+enum Papel {
+  ADMIN
+  EMPRESA
+}
+
+enum TipoTemplate {
+  PADRAO
+  PERSONALIZADO
+}
+
+enum StatusDocumentacao {
+  PENDENTE
+  EM_GERACAO
+  COMPLETO
+  EXPIRADO
+}
+
+enum StatusPagamento {
+  ATIVO
+  ATRASADO
+  CANCELADO
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  emailOuLogin String   @unique
+  senhaHash    String
+  papel        Papel
+  empresaId    String?
+  empresa      Empresa? @relation(fields: [empresaId], references: [id])
+  createdAt    DateTime @default(now())
+  tokenReset       String?
+  tokenResetExpira DateTime?
+}
+
+model Empresa {
+  id                  String   @id @default(cuid())
+  cnpj                String   @unique
+  razaoSocial         String
+  nomeFantasia        String?
+  dataAbertura        DateTime?
+  situacaoCadastral   String?
+  naturezaJuridica    String?
+  capitalSocial       Float?
+  porteEmpresa        String?
+  cnaePrincipal       String?
+  cnaesSecundarios    String[]
+  logradouro          String?
+  numero              String?
+  complemento         String?
+  bairro              String?
+  cidade              String?
+  uf                  String?
+  cep                 String?
+  telefone            String?
+  emailCorporativo    String?
+  quadroSocietario    Json?
+  planoContratado     String?
+  dataInicioContrato  DateTime?
+  dataRenovacao       DateTime?
+  statusPagamento     StatusPagamento @default(ATIVO)
+  responsavelNome     String?
+  responsavelCargo    String?
+  responsavelTelefone String?
+  responsavelEmail    String?
+
+  usuarios     Usuario[]
+  funcionarios Funcionario[]
+  templates    TemplateDocumento[]
+  createdAt    DateTime @default(now())
+}
+
+model Funcionario {
+  id                  String   @id @default(cuid())
+  empresaId           String
+  empresa             Empresa  @relation(fields: [empresaId], references: [id])
+
+  nomeCompleto        String
+  cpf                 String   @unique
+  rg                  String?
+  orgaoEmissor        String?
+  ufEmissao           String?
+  dataNascimento      DateTime?
+  estadoCivil         String?
+  nacionalidade       String?
+
+  logradouro          String?
+  numero              String?
+  complemento         String?
+  bairro              String?
+  cidade              String?
+  uf                  String?
+  cep                 String?
+  telefone            String?
+  email               String?
+
+  matriculaInterna    String?
+  cargo               String?
+  cbo                 String?
+  departamento        String?
+  dataAdmissao        DateTime?
+  tipoContrato        String?
+  jornadaTrabalho     String?
+  salarioBase         Float?
+  ctpsNumero          String?
+  ctpsSerie           String?
+  pisNis              String?
+
+  dependentes         Json?
+  statusDocumentacao  StatusDocumentacao @default(PENDENTE)
+  dataUltimaGeracao   DateTime?
+
+  documentosGerados   DocumentoGerado[]
+  createdAt           DateTime @default(now())
+}
+
+model TemplateDocumento {
+  id                  String       @id @default(cuid())
+  nome                String
+  tipo                TipoTemplate
+  empresaId           String?
+  empresa             Empresa?     @relation(fields: [empresaId], references: [id])
+  arquivoOriginalUrl  String
+  variaveisDetectadas String[]
+  ativo               Boolean      @default(true)
+
+  documentosGerados   DocumentoGerado[]
+  createdAt           DateTime @default(now())
+}
+
+model DocumentoGerado {
+  id                  String   @id @default(cuid())
+  funcionarioId       String
+  funcionario         Funcionario @relation(fields: [funcionarioId], references: [id])
+  templateId          String
+  template            TemplateDocumento @relation(fields: [templateId], references: [id])
+  urlPdf              String?
+  statusAssinatura    String?
+  dataGeracao         DateTime @default(now())
+}
