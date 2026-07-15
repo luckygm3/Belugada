@@ -73,6 +73,7 @@ model Empresa {
   responsavelCargo    String?
   responsavelTelefone String?
   responsavelEmail    String?
+  templatesPadraoSelecionados EmpresaTemplatePadrao[]
 
   usuarios     Usuario[]
   funcionarios Funcionario[]
@@ -134,6 +135,7 @@ model TemplateDocumento {
   variaveisDetectadas String[]
   ativo               Boolean      @default(true)
 
+  empresasQueUsam EmpresaTemplatePadrao[]
   documentosGerados   DocumentoGerado[]
   createdAt           DateTime @default(now())
 }
@@ -147,4 +149,15 @@ model DocumentoGerado {
   urlPdf              String?
   statusAssinatura    String?
   dataGeracao         DateTime @default(now())
+}
+
+model EmpresaTemplatePadrao {
+  id         String   @id @default(cuid())
+  empresaId  String
+  empresa    Empresa  @relation(fields: [empresaId], references: [id])
+  templateId String
+  template   TemplateDocumento @relation(fields: [templateId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([empresaId, templateId])
 }
