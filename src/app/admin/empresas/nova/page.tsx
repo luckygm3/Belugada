@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useDebouncedValue } from "@/hooks/useDebounce";
+import { validarCNPJ } from "@/lib/validacao";
 
 interface DadosCnpj {
   razao_social: string;
@@ -15,6 +17,12 @@ interface DadosCnpj {
   ddd_telefone_1: string;
 }
 
+interface TemplatePersonalizado {
+  id: string;
+  nome: string;
+  variaveisDetectadas: string[];
+}
+
 export default function NovaEmpresaPage() {
   const router = useRouter();
   const [etapa, setEtapa] = useState(1);
@@ -24,9 +32,17 @@ export default function NovaEmpresaPage() {
   const [cnpj, setCnpj] = useState("");
   const [dadosEmpresa, setDadosEmpresa] = useState<DadosCnpj | null>(null);
 
+  const cnpjDebounced = useDebouncedValue(cnpj, 400);
+  const cnpjDigitosDebounced = cnpjDebounced.replace(/\D/g, "");
+  const cnpjValido =
+    cnpjDigitosDebounced.length === 14 ? validarCNPJ(cnpjDigitosDebounced) : null;
+
   const [loginAcesso, setLoginAcesso] = useState("");
   const [senhaAcesso, setSenhaAcesso] = useState("");
-  const [plano, setPlano] = useState("MENSAL");
+  const [plano, setPlano] = useState("MENSAL"); 
+
+  const [templatesDisponiveis, setTemplatesDisponiveis] = useState<TemplatePersonalizado[]>([]);
+const [templatesSelecionados, setTemplatesSelecionados] = useState<string[]>([]);
 
   async function buscarCnpj() {
     setErro("");
@@ -50,6 +66,23 @@ export default function NovaEmpresaPage() {
     setSenhaAcesso(senha);
   }
 
+  async function buscarTemplatesPersonalizados() {
+  setCarregando(true);
+  const res = await fetch("/api/admin/empresas/templates-personalizados");
+  setCarregando(false);
+
+  if (res.ok) {
+    const { templates } = await res.json();
+    setTemplatesDisponiveis(templates);
+  }
+  setEtapa(4);
+}
+
+function toggleTemplate(id: string) {
+  setTemplatesSelecionados((prev) =>
+    prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+  );
+}
   async function finalizar() {
     setErro("");
 
@@ -79,7 +112,8 @@ export default function NovaEmpresaPage() {
         loginAcesso,
         senhaAcesso,
         plano,
-        }),
+        templatePersonalizadoIds: templatesSelecionados,
+      }),
     });
 
     setCarregando(false);
@@ -107,8 +141,15 @@ export default function NovaEmpresaPage() {
             value={cnpj}
             onChange={(e) => setCnpj(e.target.value)}
             placeholder="00.000.000/0000-00"
-            className="w-full border rounded-md px-3 py-2 mb-4"
+            className="w-full border rounded-md px-3 py-2"
           />
+          {cnpjValido === true && (
+            <p className="text-green-600 text-sm mb-4 mt-1">✅ CNPJ válido</p>
+          )}
+          {cnpjValido === false && (
+            <p className="text-red-600 text-sm mb-4 mt-1">❌ CNPJ inválido</p>
+          )}
+          {cnpjValido === null && <div className="mb-4" />}
           <button
             onClick={buscarCnpj}
             disabled={carregando}
@@ -165,14 +206,44 @@ export default function NovaEmpresaPage() {
             </select>
           </div>
           <button
-            onClick={finalizar}
+            onClick={buscarTemplatesPersonalizados}
             disabled={carregando || !loginAcesso || !senhaAcesso}
             className="bg-black text-white px-4 py-2 rounded-md"
           >
-            {carregando ? "Cadastrando..." : "Cadastrar empresa"}
+            {carregando ? "Carregando..." : "Continuar"}
           </button>
         </div>
       )}
+      {etapa === 4 && (
+  <div className="bg-white border rounded-lg p-6 space-y-3">
+    <p className="text-sm text-gray-600 mb-2">
+      Selecione os documentos personalizados que essa empresa vai usar (opcional, pode adicionar depois).
+    </p>
+
+    {templatesDisponiveis.length === 0 && (
+      <p className="text-sm text-gray-400">Nenhum template personalizado na biblioteca ainda.</p>
+    )}
+
+    {templatesDisponiveis.map((t) => (
+      <label key={t.id} className="flex items-center gap-2 border rounded-md px-3 py-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={templatesSelecionados.includes(t.id)}
+          onChange={() => toggleTemplate(t.id)}
+        />
+        <span className="text-sm">{t.nome}</span>
+      </label>
+    ))}
+
+    <button
+      onClick={finalizar}
+      disabled={carregando}
+      className="bg-black text-white px-4 py-2 rounded-md mt-4"
+    >
+      {carregando ? "Cadastrando..." : "Cadastrar empresa"}
+    </button>
+  </div>
+)}
     </div>
   );
 }

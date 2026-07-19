@@ -1,0 +1,89 @@
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
+
+export async function POST(req: Request) {
+  const session = await auth();
+  if (!session || session.user.papel !== "ADMIN") {
+    return Response.json({ error: "Não autorizado" }, { status: 403 });
+  }
+
+  const body = await req.json();
+  const {
+    cnpj,
+    razaoSocial,
+    nomeFantasia,
+    logradouro,
+    numero,
+    bairro,
+    cidade,
+    uf,
+    cep,
+    telefone,
+    loginAcesso,
+    senhaAcesso,
+    plano,
+    templatePersonalizadoIds,
+  } = body;
+
+  if (!cnpj || !razaoSocial || !loginAcesso || !senhaAcesso) {
+    return Response.json(
+      { error: "Campos obrigatórios faltando (CNPJ, razão social, login ou senha)." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const senhaHash = await bcrypt.hash(senhaAcesso, 10);
+
+    const empresaId = await prisma.$transaction(async (tx) => {
+      const empresa = await tx.empresa.create({
+        data: {
+          cnpj,
+          razaoSocial,
+          nomeFantasia: nomeFantasia || null,
+          logradouro: logradouro || null,
+          numero: numero || null,
+          bairro: bairro || null,
+          cidade: cidade || null,
+          uf: uf || null,
+          cep: cep || null,
+          telefone: telefone || null,
+          planoContratado: plano || null,
+        },
+      });
+
+      await tx.usuario.create({
+        data: {
+          emailOuLogin: loginAcesso,
+          senhaHash,
+          papel: "EMPRESA",
+          empresaId: empresa.id,
+        },
+      });
+          if (Array.isArray(templatePersonalizadoIds) && templatePersonalizadoIds.length > 0) {
+            await tx.empresaTemplatePersonalizado.createMany({
+              data: templatePersonalizadoIds.map((templateId: string) => ({
+                empresaId: empresa.id,
+                templateId,
+              })),
+            });
+          }
+      return empresa.id;
+    });
+
+    return Response.json({ empresaId }, { status: 201 });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const campo = (err.meta?.target as string[])?.join(", ") ?? "campo único";
+      return Response.json(
+        { error: `Já existe um cadastro com esse ${campo}.` },
+        { status: 409 }
+      );
+    }
+
+    console.error("Erro ao cadastrar empresa:", err);
+    return Response.json({ error: "Erro ao cadastrar empresa." }, { status: 500 });
+  }
+}

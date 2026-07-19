@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import UploadTemplateForm from "@/components/UploadTemplateForm";
 import SelecaoTemplatesPadraoForm from "@/components/SelecaoTemplatesPadraoForm";
+import SelecaoTemplatesPersonalizadosForm from "@/components/SelecaoTemplatesPersonalizadosForm";
 
 export default async function EmpresaDetalhePage({
   params,
@@ -10,12 +10,13 @@ export default async function EmpresaDetalhePage({
 }) {
   const { id } = await params;
 
-  const [empresa, todosTemplatesPadrao] = await Promise.all([
+  const [empresa, todosTemplatesPadrao, todosTemplatesPersonalizados] = await Promise.all([
     prisma.empresa.findUnique({
       where: { id },
       include: {
-        templates: { where: { ativo: true } }, // personalizados dessa empresa
+        templates: { where: { ativo: true } }, // personalizados exclusivos (upload direto) dessa empresa
         templatesPadraoSelecionados: { select: { templateId: true } },
+        templatesPersonalizadosSelecionados: { select: { templateId: true } },
         _count: { select: { funcionarios: true } },
       },
     }),
@@ -23,11 +24,18 @@ export default async function EmpresaDetalhePage({
       where: { tipo: "PADRAO", ativo: true },
       orderBy: { nome: "asc" },
     }),
+    prisma.templateDocumento.findMany({
+      where: { tipo: "PERSONALIZADO", ativo: true, empresaId: null },
+      orderBy: { nome: "asc" },
+    }),
   ]);
 
   if (!empresa) notFound();
 
-  const totalDocumentos = empresa.templatesPadraoSelecionados.length + empresa.templates.length;
+  const totalDocumentos =
+    empresa.templatesPadraoSelecionados.length +
+    empresa.templatesPersonalizadosSelecionados.length +
+    empresa.templates.length;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -44,7 +52,7 @@ export default async function EmpresaDetalhePage({
         <p className="col-span-2">
           <strong>Total de documentos por funcionário:</strong> {totalDocumentos}
           <span className="text-gray-500 dark:text-gray-400">
-            {" "}({empresa.templatesPadraoSelecionados.length} padrão + {empresa.templates.length} personalizado)
+            {" "}({empresa.templatesPadraoSelecionados.length} padrão + {empresa.templatesPersonalizadosSelecionados.length} personalizado da biblioteca + {empresa.templates.length} personalizado exclusivo)
           </span>
         </p>
       </div>
@@ -55,13 +63,10 @@ export default async function EmpresaDetalhePage({
         selecionadosIniciais={empresa.templatesPadraoSelecionados.map((s) => s.templateId)}
       />
 
-      <UploadTemplateForm
+      <SelecaoTemplatesPersonalizadosForm
         empresaId={empresa.id}
-        templatesIniciais={empresa.templates.map((t) => ({
-          id: t.id,
-          nome: t.nome,
-          variaveisDetectadas: t.variaveisDetectadas,
-        }))}
+        todosTemplates={todosTemplatesPersonalizados.map((t) => ({ id: t.id, nome: t.nome }))}
+        selecionadosIniciais={empresa.templatesPersonalizadosSelecionados.map((s) => s.templateId)}
       />
     </div>
   );
