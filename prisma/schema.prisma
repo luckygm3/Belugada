@@ -74,6 +74,7 @@ model Empresa {
   responsavelTelefone String?
   responsavelEmail    String?
   templatesPadraoSelecionados EmpresaTemplatePadrao[]
+  templatesPersonalizadosSelecionados EmpresaTemplatePersonalizado[]
 
   usuarios     Usuario[]
   funcionarios Funcionario[]
@@ -125,17 +126,36 @@ model Funcionario {
   createdAt           DateTime @default(now())
 }
 
+model EmpresaTemplatePersonalizado {
+  id         String   @id @default(cuid())
+  empresaId  String
+  empresa    Empresa  @relation(fields: [empresaId], references: [id])
+  templateId String
+  template   TemplateDocumento @relation(fields: [templateId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([empresaId, templateId])
+}
+
+enum OrigemTemplate {
+  UPLOAD
+  EDITOR
+}
 model TemplateDocumento {
   id                  String       @id @default(cuid())
   nome                String
   tipo                TipoTemplate
+  origem              OrigemTemplate  @default(UPLOAD)
+  arquivoUrl          String?         // usado quando origem = UPLOAD
+  conteudo            Json?           // usado quando origem = EDITOR (JSON do TipTap)
   empresaId           String?
   empresa             Empresa?     @relation(fields: [empresaId], references: [id])
-  arquivoOriginalUrl  String
+  arquivoOriginalUrl  String?
   variaveisDetectadas String[]
   ativo               Boolean      @default(true)
 
   empresasQueUsam EmpresaTemplatePadrao[]
+  empresasQueUsamPersonalizado EmpresaTemplatePersonalizado[]
   documentosGerados   DocumentoGerado[]
   createdAt           DateTime @default(now())
 }
