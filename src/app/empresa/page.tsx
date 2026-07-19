@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import ExcluirFuncionarioButton from "@/components/ExcluirFuncionarioButton";
+import { BotaoWhatsapp } from "@/components/BotaoWhatsapp";
 
 export default async function EmpresaDashboard() {
   const session = await auth();
@@ -40,9 +42,15 @@ export default async function EmpresaDashboard() {
                   </span>
                 </td>
                 <td className="p-3 text-right">
-                  <Link href={`/empresa/funcionarios/${f.id}`} className="text-blue-600 hover:underline">
-                    Ver
-                  </Link>
+                  <div className="flex items-center justify-end gap-3">
+                    <Link href={`/empresa/funcionarios/${f.id}`} className="text-blue-600 hover:underline">
+                      Ver
+                    </Link>
+                    <Link href={`/empresa/funcionarios/${f.id}/editar`} className="text-blue-600 hover:underline">
+                      Editar
+                    </Link>
+                    <ExcluirFuncionarioButton funcionarioId={f.id} nomeFuncionario={f.nomeCompleto} />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -55,6 +63,16 @@ export default async function EmpresaDashboard() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-6 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-6 flex items-center justify-between gap-4 flex-wrap">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Precisa de um novo documento? Entre em contato com a nossa consultoria.
+        </p>
+        <BotaoWhatsapp
+          variante="inline"
+          mensagem="Olá! Preciso de um novo documento para um funcionário. Podem me ajudar?"
+        />
       </div>
     </div>
   );
