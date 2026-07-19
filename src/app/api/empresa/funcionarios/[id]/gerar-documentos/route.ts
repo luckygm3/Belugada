@@ -4,12 +4,13 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { mapearVariaveis } from "@/lib/mapearVariaveis";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import { renderizarTemplateEditor, TipTapNode } from '@/lib/renderizar-template-editor'
 
 function sanitizarNomeArquivo(nome: string): string {
   return nome
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // remove os acentos (ã → a, ç → c, etc.)
-    .replace(/[^a-zA-Z0-9\s-]/g, "") // remove qualquer outro caractere especial
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\s-]/g, "")
     .trim()
     .replace(/\s+/g, "-");
 }
@@ -43,7 +44,61 @@ export async function POST(
     const template = await prisma.templateDocumento.findUnique({ where: { id: templateId } });
     if (!template) continue;
 
-    // Baixa o .docx original do Storage
+    // Caminho EDITOR: templates criados no site (TipTap), sem arquivo .docx
+    if (template.origem === "EDITOR") {
+  if (!template.conteudo) {
+    resultados.push({ template: template.nome, erro: "Template sem conteúdo salvo." });
+    continue;
+  }
+
+  try {
+    const html = renderizarTemplateEditor(
+      template.conteudo as unknown as TipTapNode,
+      dados
+    );
+
+    // @ts-expect-error - html-to-docx não tem tipos oficiais
+    const HTMLtoDOCX = (await import("html-to-docx")).default;
+    const bufferDocx: Buffer = await HTMLtoDOCX(`<div>${html}</div>`, undefined, {
+      table: { row: { cantSplit: true } },
+    });
+
+    const caminhoSaida = `${funcionarioId}/${Date.now()}-${sanitizarNomeArquivo(template.nome)}.docx`;
+
+    const { error: erroUpload } = await supabaseAdmin.storage
+      .from("documentos-gerados")
+      .upload(caminhoSaida, bufferDocx, {
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+    if (erroUpload) {
+      resultados.push({ template: template.nome, erro: "Falha ao salvar o documento gerado." });
+      continue;
+    }
+
+    await prisma.documentoGerado.create({
+      data: {
+        funcionarioId,
+        templateId,
+        urlPdf: caminhoSaida, // guarda o caminho do .docx, igual ao caminho UPLOAD
+      },
+    });
+
+    resultados.push({ template: template.nome, caminho: caminhoSaida, ok: true });
+  } catch (err) {
+    console.error("Erro ao converter template do editor em .docx:", err);
+    resultados.push({ template: template.nome, erro: "Erro ao gerar o documento a partir do editor." });
+  }
+
+  continue;
+}
+
+    // Caminho UPLOAD: templates .docx (fluxo já existente)
+    if (!template.arquivoOriginalUrl) {
+      resultados.push({ template: template.nome, erro: "Template sem arquivo original vinculado." });
+      continue;
+    }
+
     const { data: arquivoOriginal, error: erroDownload } = await supabaseAdmin.storage
       .from("templates")
       .download(template.arquivoOriginalUrl);
@@ -84,7 +139,7 @@ export async function POST(
         data: {
           funcionarioId,
           templateId,
-          urlPdf: caminhoSaida, // por enquanto guarda o caminho do .docx gerado
+          urlPdf: caminhoSaida,
         },
       });
 
