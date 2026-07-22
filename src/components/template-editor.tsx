@@ -6,7 +6,8 @@ import { Variable } from '@/lib/tiptap/variable-extension'
 import { useState } from 'react'
 import { salvarTemplate } from '@/app/actions/salvar-template'
 import { VARIAVEIS_DISPONIVEIS } from '@/lib/variaveis-disponiveis'
-import { TipTapNode } from '@/lib/renderizar-template-editor'
+import { Button } from './ui/Button'
+import { Input } from './ui/Input'
 
 export function TemplateEditor() {
   const editor = useEditor({
@@ -60,41 +61,37 @@ async function handleSalvar() {
 
   return (
   <div>
-    {/* Nome do template + botão salvar (novo) */}
-    <div className="flex items-center gap-3 mb-4">
-      <input
-        type="text"
-        placeholder="Nome do template"
-        value={nomeTemplate}
-        onChange={(e) => setNomeTemplate(e.target.value)}
-        className="border rounded-md px-3 py-2 text-sm flex-1"
-      />
-      <button
-        onClick={handleSalvar}
-        disabled={salvando}
-        className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-      >
-        {salvando ? 'Salvando...' : 'Salvar template'}
-      </button>
+    {/* Nome do template + botão salvar */}
+    <div className="mb-4 flex items-end gap-3">
+      <div className="flex-1">
+        <Input label="Nome do template" value={nomeTemplate} onChange={(e) => setNomeTemplate(e.target.value)} />
+      </div>
+      <Button variant="primary" onClick={handleSalvar} loading={salvando}>
+        Salvar template
+      </Button>
     </div>
-    {mensagem && <p className="text-sm text-gray-600 mb-2">{mensagem}</p>}
+    {mensagem && <p className="mb-2 text-body-sm text-ink-muted">{mensagem}</p>}
 
-    {/* Sidebar + editor (já existente) */}
+    {/* Sidebar + editor */}
     <div className="flex gap-4">
-      <aside className="w-64 shrink-0 border rounded-lg p-3 space-y-2">
-  <h3 className="font-medium text-sm text-gray-500 mb-2">Variáveis disponíveis</h3>
-  {VARIAVEIS_DISPONIVEIS.map((v) => (
-    <div
-      key={v.key}
-      draggable
-      onDragStart={(e) => handleDragStart(e, v)}
-      className="cursor-grab active:cursor-grabbing rounded-md border bg-gray-50 px-3 py-2 text-sm hover:bg-gray-100"
-    >
-      {v.label}
-    </div>
-  ))}
-</aside>
-      <div onDrop={handleDrop} onDragOver={handleDragOver} className="flex-1 border rounded-lg p-4 min-h-[400px]">
+      <aside className="w-64 shrink-0 space-y-2 rounded-pa-lg border border-border bg-surface p-3 shadow-pa-sm">
+        <h3 className="mb-2 text-body-sm font-medium text-ink-muted">Variáveis disponíveis</h3>
+        {VARIAVEIS_DISPONIVEIS.map((v) => (
+          <div
+            key={v.key}
+            draggable
+            onDragStart={(e) => handleDragStart(e, v)}
+            className="cursor-grab rounded-pa-md border border-border bg-surface-alt px-3 py-2 text-body-sm text-ink transition-colors hover:bg-slate-100 active:cursor-grabbing"
+          >
+            {v.label}
+          </div>
+        ))}
+      </aside>
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        className="min-h-[400px] flex-1 rounded-pa-lg border border-border bg-surface p-4"
+      >
         <EditorContent editor={editor} />
       </div>
     </div>

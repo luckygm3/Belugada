@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import { empresaCadastroSchema } from "@/lib/schemas/empresa";
+import { primeiraMensagemDeErro, mensagensPorCampo } from "@/lib/schemas/comuns";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -10,6 +12,15 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
+  const validado = empresaCadastroSchema.safeParse(body);
+
+  if (!validado.success) {
+    return Response.json(
+      { error: primeiraMensagemDeErro(validado.error), campos: mensagensPorCampo(validado.error) },
+      { status: 400 }
+    );
+  }
+
   const {
     cnpj,
     razaoSocial,
@@ -21,18 +32,23 @@ export async function POST(req: Request) {
     uf,
     cep,
     telefone,
+    dataAbertura,
+    situacaoCadastral,
+    naturezaJuridica,
+    capitalSocial,
+    porteEmpresa,
+    cnaePrincipal,
+    cnaesSecundarios,
+    quadroSocietario,
+    responsavelNome,
+    responsavelCargo,
+    responsavelTelefone,
+    responsavelEmail,
     loginAcesso,
     senhaAcesso,
     plano,
     templatePersonalizadoIds,
-  } = body;
-
-  if (!cnpj || !razaoSocial || !loginAcesso || !senhaAcesso) {
-    return Response.json(
-      { error: "Campos obrigatórios faltando (CNPJ, razão social, login ou senha)." },
-      { status: 400 }
-    );
-  }
+  } = validado.data;
 
   try {
     const senhaHash = await bcrypt.hash(senhaAcesso, 10);
@@ -50,6 +66,23 @@ export async function POST(req: Request) {
           uf: uf || null,
           cep: cep || null,
           telefone: telefone || null,
+          dataAbertura: dataAbertura ? new Date(dataAbertura) : null,
+          situacaoCadastral: situacaoCadastral || null,
+          naturezaJuridica: naturezaJuridica || null,
+          capitalSocial: capitalSocial ? parseFloat(capitalSocial) : null,
+          porteEmpresa: porteEmpresa || null,
+          cnaePrincipal: cnaePrincipal || null,
+          cnaesSecundarios: Array.isArray(cnaesSecundarios)
+            ? cnaesSecundarios.map((c: string) => c.trim()).filter(Boolean)
+            : [],
+          quadroSocietario:
+            Array.isArray(quadroSocietario) && quadroSocietario.length > 0
+              ? quadroSocietario
+              : undefined,
+          responsavelNome: responsavelNome || null,
+          responsavelCargo: responsavelCargo || null,
+          responsavelTelefone: responsavelTelefone || null,
+          responsavelEmail: responsavelEmail || null,
           planoContratado: plano || null,
         },
       });

@@ -3,11 +3,13 @@ interface BotaoWhatsappProps {
   variante?: "fixo" | "inline";
 }
 
+export const NUMERO_WHATSAPP = "5545998182943";
+
 export function BotaoWhatsapp({
   mensagem = "Olá! Quero saber mais sobre a plataforma.",
   variante = "fixo",
 }: BotaoWhatsappProps = {}) {
-  const numero = "5545998182943";
+  const numero = NUMERO_WHATSAPP;
   const mensagemCodificada = encodeURIComponent(mensagem);
 
   const classeFixo =

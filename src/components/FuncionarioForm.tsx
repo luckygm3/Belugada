@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDebouncedValue } from "@/hooks/useDebounce";
 import { validarCPF } from "@/lib/validacao";
+import { funcionarioSchema, funcionarioEtapa1Schema, funcionarioEtapa2Schema } from "@/lib/schemas/funcionario";
+import { mensagensPorCampo, primeiraMensagemDeErro } from "@/lib/schemas/comuns";
 
 interface Dependente {
   nome: string;
@@ -79,6 +81,7 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
   const [etapa, setEtapa] = useState(1);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
+  const [erros, setErros] = useState<Record<string, string>>({});
 
   // Etapa 1 — dados pessoais
   const [nomeCompleto, setNomeCompleto] = useState(dados.nomeCompleto);
@@ -160,15 +163,71 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
   }
 
   function validarEtapa1() {
-    if (!nomeCompleto || !cpfValor) {
-      setErro("Nome completo e CPF são obrigatórios.");
+    const resultado = funcionarioEtapa1Schema.safeParse({
+      nomeCompleto,
+      cpf: cpfValor,
+      rg,
+      dataNascimento,
+    });
+
+    if (!resultado.success) {
+      setErros(mensagensPorCampo(resultado.error));
+      setErro(primeiraMensagemDeErro(resultado.error));
       return false;
     }
+
+    setErros({});
+    setErro("");
+    return true;
+  }
+
+  function validarEtapa2() {
+    const resultado = funcionarioEtapa2Schema.safeParse({ cep, telefone, email });
+
+    if (!resultado.success) {
+      setErros(mensagensPorCampo(resultado.error));
+      setErro(primeiraMensagemDeErro(resultado.error));
+      return false;
+    }
+
+    setErros({});
+    setErro("");
     return true;
   }
 
   async function finalizar() {
     setErro("");
+
+    const payload = {
+      nomeCompleto,
+      cpf: cpfValor,
+      rg,
+      dataNascimento,
+      estadoCivil,
+      logradouro,
+      numero,
+      bairro,
+      cidade,
+      uf,
+      cep,
+      telefone,
+      email,
+      cargo,
+      departamento,
+      dataAdmissao,
+      tipoContrato,
+      salarioBase: salarioBaseCentavos ? (parseInt(salarioBaseCentavos, 10) / 100).toFixed(2) : "",
+      dependentes,
+    };
+
+    const resultado = funcionarioSchema.safeParse(payload);
+    if (!resultado.success) {
+      setErros(mensagensPorCampo(resultado.error));
+      setErro(primeiraMensagemDeErro(resultado.error));
+      return;
+    }
+    setErros({});
+
     setCarregando(true);
 
     const url = modo === "editar" ? `/api/empresa/funcionarios/${funcionarioId}` : "/api/empresa/funcionarios";
@@ -177,27 +236,7 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nomeCompleto,
-        cpf: cpfValor,
-        rg,
-        dataNascimento,
-        estadoCivil,
-        logradouro,
-        numero,
-        bairro,
-        cidade,
-        uf,
-        cep,
-        telefone,
-        email,
-        cargo,
-        departamento,
-        dataAdmissao,
-        tipoContrato,
-        salarioBase: salarioBaseCentavos ? (parseInt(salarioBaseCentavos, 10) / 100).toFixed(2) : "",
-        dependentes,
-      }),
+      body: JSON.stringify(payload),
     });
 
     setCarregando(false);
@@ -205,6 +244,7 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
     if (!res.ok) {
       const data = await res.json();
       setErro(data.error || (modo === "editar" ? "Erro ao salvar alterações." : "Erro ao cadastrar funcionário."));
+      if (data.campos) setErros(data.campos);
       return;
     }
 
@@ -228,6 +268,7 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
           <div>
             <label className={labelClass}>Nome completo</label>
             <input value={nomeCompleto} onChange={(e) => setNomeCompleto(e.target.value)} className={inputClass} />
+            {erros.nomeCompleto && <p className="text-red-600 text-xs mt-1">{erros.nomeCompleto}</p>}
           </div>
           <div>
             <label className={labelClass}>CPF</label>
@@ -238,14 +279,17 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
             {cpfValido === false && (
               <p className="text-red-600 text-sm mt-1">❌ CPF inválido</p>
             )}
+            {erros.cpf && <p className="text-red-600 text-xs mt-1">{erros.cpf}</p>}
           </div>
           <div>
             <label className={labelClass}>RG</label>
             <input value={rg} onChange={(e) => setRg(e.target.value)} className={inputClass} />
+            {erros.rg && <p className="text-red-600 text-xs mt-1">{erros.rg}</p>}
           </div>
           <div>
             <label className={labelClass}>Data de nascimento</label>
             <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} className={inputClass} />
+            {erros.dataNascimento && <p className="text-red-600 text-xs mt-1">{erros.dataNascimento}</p>}
           </div>
           <div>
             <label className={labelClass}>Estado civil</label>
@@ -272,6 +316,7 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
             <div className="flex-1">
               <label className={labelClass}>CEP</label>
               <input value={cep} onChange={(e) => setCep(e.target.value)} placeholder="00000-000" className={inputClass} />
+              {erros.cep && <p className="text-red-600 text-xs mt-1">{erros.cep}</p>}
             </div>
             <button onClick={buscarCep} className="border dark:border-gray-600 dark:text-white px-3 py-2 rounded-md text-sm">
               Buscar
@@ -304,16 +349,18 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
           <div>
             <label className={labelClass}>Telefone</label>
             <input value={telefone} onChange={(e) => setTelefone(e.target.value)} className={inputClass} />
+            {erros.telefone && <p className="text-red-600 text-xs mt-1">{erros.telefone}</p>}
           </div>
           <div>
             <label className={labelClass}>E-mail</label>
             <input value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+            {erros.email && <p className="text-red-600 text-xs mt-1">{erros.email}</p>}
           </div>
           <div className="flex gap-2">
             <button onClick={() => setEtapa(1)} className="border dark:border-gray-600 dark:text-white px-4 py-2 rounded-md">
               Voltar
             </button>
-            <button onClick={() => setEtapa(3)} className="bg-black text-white px-4 py-2 rounded-md">
+            <button onClick={() => validarEtapa2() && setEtapa(3)} className="bg-black text-white px-4 py-2 rounded-md">
               Continuar
             </button>
           </div>

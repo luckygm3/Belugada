@@ -10,14 +10,18 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-montserrat);
+  --font-mono: ui-monospace, monospace;
+  /* Fonte do painel admin (ver bloco "Painel admin" mais abaixo) — precisa
+     ficar em @theme inline, não @theme, porque referencia uma variável só
+     resolvida em runtime (--font-roboto vem do next/font via className) */
+  --font-workspace: var(--font-roboto), "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-montserrat), Arial, Helvetica, sans-serif;
 }
 
 .variable-chip {
@@ -30,4 +34,513 @@ body {
   font-weight: 500;
   margin: 0 2px;
   user-select: none;
+}
+
+/* ===== Landing PACTA ===== */
+.landing-pacta {
+  /* Azul-petróleo dominante (seriedade jurídica), chumbo para texto, dourado discreto para ação */
+  --pt-petrol-950: #081420;
+  --pt-petrol-900: #0c1d2e;
+  --pt-petrol-800: #12293d;
+  --pt-petrol-700: #1a3a54;
+  --pt-paper: #f6f8f9;
+  --pt-ink: #16222e;
+  --pt-ink-suave: #46586a;
+  --pt-claro: #e6edf3;
+  --pt-claro-suave: #9db1c0;
+  --pt-dourado: #c5a35f;
+  --pt-dourado-forte: #a98842;
+  --pt-linha-escura: rgba(230, 237, 243, 0.14);
+  --pt-linha-clara: rgba(22, 34, 46, 0.14);
+
+  font-family: var(--font-montserrat), "Segoe UI", sans-serif;
+  color: var(--pt-ink);
+  background: var(--pt-paper);
+}
+
+.landing-pacta ::selection {
+  background: var(--pt-dourado);
+  color: var(--pt-petrol-950);
+}
+
+.landing-pacta :focus-visible {
+  outline: 2px solid var(--pt-dourado);
+  outline-offset: 3px;
+}
+
+.landing-pacta .fonte-display {
+  font-family: var(--font-cinzel), Georgia, serif;
+}
+
+/* Recomendado pela doc do Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* =========================================================================
+   Área interna (admin/*, empresa/*, auth) — mesma paleta/tipografia da
+   landing, mas sem dark mode e sem qualquer animação além de hover/estado.
+   Aplicar a classe "app-interno" no wrapper raiz de cada layout/página
+   (mesmo padrão de ".landing-pacta"). Componentes usam as classes utilitárias
+   abaixo (.btn-primary, .card, .input, .badge-*, tabela) em vez de repetir
+   cadeias longas de Tailwind arbitrário a cada página.
+   ========================================================================= */
+.app-interno {
+  --ai-petrol-950: #081420;
+  --ai-petrol-900: #0c1d2e;
+  --ai-petrol-800: #12293d;
+  --ai-petrol-700: #1a3a54;
+  --ai-paper: #f6f8f9;
+  --ai-ink: #16222e;
+  --ai-ink-suave: #46586a;
+  --ai-claro: #e6edf3;
+  --ai-linha: rgba(22, 34, 46, 0.14);
+  --ai-dourado: #c5a35f;
+  --ai-dourado-forte: #a98842;
+
+  /* Status semânticos — não usam petróleo/dourado, precisam de convenção universal */
+  --ai-sucesso-bg: #e7f4ec;
+  --ai-sucesso-texto: #1e6b3c;
+  --ai-alerta-bg: #fdf3df;
+  --ai-alerta-texto: #92620a;
+  --ai-perigo-bg: #fbe9e9;
+  --ai-perigo-texto: #a3282c;
+  --ai-neutro-bg: #eceff1;
+  --ai-neutro-texto: var(--ai-ink-suave);
+
+  font-family: var(--font-montserrat), "Segoe UI", sans-serif;
+  color: var(--ai-ink);
+  background: var(--ai-paper);
+}
+
+.app-interno ::selection {
+  background: var(--ai-dourado);
+  color: var(--ai-petrol-950);
+}
+
+.app-interno :focus-visible {
+  outline: 2px solid var(--ai-petrol-700);
+  outline-offset: 2px;
+}
+
+.app-interno .fonte-display {
+  font-family: var(--font-cinzel), Georgia, serif;
+}
+
+/* --- Botões --- */
+.app-interno .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background: var(--ai-petrol-800);
+  transition: background-color 150ms ease;
+}
+.app-interno .btn-primary:hover {
+  background: var(--ai-petrol-900);
+}
+.app-interno .btn-primary:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Reservado a UM momento de decisão por fluxo (ex.: botão final de um wizard) — não usar como padrão geral */
+.app-interno .btn-dourado {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ai-petrol-950);
+  background: var(--ai-dourado);
+  transition: background-color 150ms ease;
+}
+.app-interno .btn-dourado:hover {
+  background: var(--ai-dourado-forte);
+}
+.app-interno .btn-dourado:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.app-interno .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ai-ink);
+  background: transparent;
+  border: 1px solid var(--ai-linha);
+  transition: border-color 150ms ease, color 150ms ease;
+}
+.app-interno .btn-secondary:hover {
+  border-color: var(--ai-ink-suave);
+}
+.app-interno .btn-secondary:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.app-interno .btn-destructive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background: #dc2626;
+  transition: background-color 150ms ease;
+}
+.app-interno .btn-destructive:hover {
+  background: #b91c1c;
+}
+.app-interno .btn-destructive:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.app-interno .link-acao {
+  color: var(--ai-petrol-800);
+  transition: color 150ms ease;
+}
+.app-interno .link-acao:hover {
+  color: var(--ai-petrol-900);
+  text-decoration: underline;
+}
+
+/* --- Formulário --- */
+.app-interno .input {
+  width: 100%;
+  border: 1px solid var(--ai-linha);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ai-ink);
+  background: white;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.app-interno .input:focus {
+  outline: none;
+  border-color: var(--ai-petrol-700);
+  /* rgba explícito (equivalente a --ai-petrol-700 a 15%) — evita depender do
+     fallback @supports que color-mix() geraria via Lightning CSS */
+  box-shadow: 0 0 0 3px rgba(26, 58, 84, 0.15);
+}
+.app-interno .input::placeholder {
+  color: var(--ai-ink-suave);
+}
+
+.app-interno .label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ai-ink);
+  margin-bottom: 0.25rem;
+}
+
+/* --- Cartão --- */
+.app-interno .card {
+  background: white;
+  border: 1px solid var(--ai-linha);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+/* --- Badges de status --- */
+.app-interno .badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.app-interno .badge-sucesso {
+  background: var(--ai-sucesso-bg);
+  color: var(--ai-sucesso-texto);
+}
+.app-interno .badge-alerta {
+  background: var(--ai-alerta-bg);
+  color: var(--ai-alerta-texto);
+}
+.app-interno .badge-perigo {
+  background: var(--ai-perigo-bg);
+  color: var(--ai-perigo-texto);
+}
+.app-interno .badge-neutro {
+  background: var(--ai-neutro-bg);
+  color: var(--ai-neutro-texto);
+}
+
+/* --- Tabela --- */
+.app-interno table.tabela {
+  width: 100%;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+.app-interno table.tabela thead {
+  background: var(--ai-paper);
+  text-align: left;
+}
+.app-interno table.tabela th {
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--ai-ink-suave);
+}
+.app-interno table.tabela td {
+  padding: 0.75rem;
+}
+.app-interno table.tabela tbody tr {
+  border-top: 1px solid var(--ai-linha);
+  transition: background-color 150ms ease;
+}
+.app-interno table.tabela tbody tr:hover {
+  background: var(--ai-paper);
+}
+
+/* --- Barra lateral (admin e empresa compartilham o mesmo visual) --- */
+.app-interno .sidebar {
+  background: var(--ai-petrol-950);
+  color: var(--ai-paper);
+}
+.app-interno .sidebar a {
+  /* rgba explícito (equivalente a --ai-claro a 85%) — ver nota em .input:focus */
+  color: rgba(230, 237, 243, 0.85);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.app-interno .sidebar a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+}
+.app-interno .sidebar a[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ai-dourado);
+  font-weight: 500;
+}
+
+/* =========================================================================
+   Painel admin — navy/teal/slate, estilo Google Material/Workspace.
+
+   Sistema visual PRÓPRIO do painel admin, deliberadamente diferente do
+   petróleo/dourado da landing e do login (decisão confirmada com o usuário
+   em 2026 — as duas telas antigas continuam com ".landing-pacta"/
+   ".app-interno" e não devem ser migradas pra este sistema).
+
+   Cores/raio/sombra/tipografia entram via @theme: viram utilities Tailwind
+   de verdade (bg-navy-600, text-slate-700, rounded-pa-lg, shadow-pa-md,
+   text-h1 etc.), usáveis em qualquer arquivo — não só dentro de
+   ".painel-admin". Essa classe só define o pano de fundo padrão (fonte,
+   cor de texto, cor de fundo) pra não repetir isso em toda página.
+
+   Aviso: "teal" e "slate" já existem na paleta padrão do Tailwind v4 — aqui
+   são REDEFINIDOS com tons próprios (acompanhando o hue do navy). Conferido
+   antes de escrever isto: nada no projeto usa as cores teal ou slate do
+   Tailwind hoje, então a sobrescrita é segura. "navy" é nova, sem conflito.
+   "sm/md/lg/xl" de raio e sombra usam o prefixo "pa-" de propósito — o
+   Tailwind padrão (rounded-md, shadow-sm etc.) já é usado em ~100 lugares
+   no resto do app e não pode ser sobrescrito sem mexer nessas telas.
+
+   Contraste checado (conversão OKLCH→sRGB + WCAG): todos os pares
+   texto/fundo abaixo batem AA (mínimo encontrado 4.81:1, slate-500 sobre
+   slate-50; a maioria fica entre 6:1 e 19:1).
+   ========================================================================= */
+@theme {
+  /* --- Navy (ação primária) --- */
+  --color-navy-50: #eff6ff;
+  --color-navy-100: #dce9fb;
+  --color-navy-200: #bcd3f1;
+  --color-navy-300: #92b4df;
+  --color-navy-400: #638fc6;
+  --color-navy-500: #3b6aa6;
+  --color-navy-600: #26538a;
+  --color-navy-700: #173d6c;
+  --color-navy-800: #0a294d;
+  --color-navy-900: #03162f;
+
+  /* --- Teal (acento/secundário) --- */
+  --color-teal-50: #e7faf9;
+  --color-teal-100: #c9f1f0;
+  --color-teal-200: #98e0e0;
+  --color-teal-300: #5ac5c4;
+  --color-teal-400: #1ba6a7;
+  --color-teal-500: #008787;
+  --color-teal-600: #006e6f;
+  --color-teal-700: #005656;
+  --color-teal-800: #003e3e;
+  --color-teal-900: #002627;
+
+  /* --- Slate (neutro) --- */
+  --color-slate-50: #f7f9fb;
+  --color-slate-100: #eceff2;
+  --color-slate-200: #dadee3;
+  --color-slate-300: #c0c4cb;
+  --color-slate-400: #9399a0;
+  --color-slate-500: #696f77;
+  --color-slate-600: #535960;
+  --color-slate-700: #383e45;
+  --color-slate-800: #20242b;
+  --color-slate-900: #0a0e12;
+
+  /* --- Semânticas estruturais — preferir estas aos passos crus acima --- */
+  --color-surface: #ffffff;
+  --color-surface-alt: var(--color-slate-50);
+  --color-border: var(--color-slate-200);
+  --color-ink: var(--color-slate-900);
+  --color-ink-muted: var(--color-slate-500);
+  --color-primary: var(--color-navy-600);
+  --color-primary-hover: var(--color-navy-700);
+  --color-accent: var(--color-teal-600);
+  --color-accent-hover: var(--color-teal-700);
+
+  /* --- Status (badges, alertas) --- */
+  --color-success: #004614;
+  --color-success-bg: #d7f4dc;
+  --color-warning: #6c3000;
+  --color-warning-bg: #fee9be;
+  --color-danger: #83000d;
+  --color-danger-bg: #ffdfda;
+
+  /* --- Tipografia: hierarquia Material/Workspace (nomes semânticos, não
+     colidem com a escala padrão text-sm/base/lg do Tailwind) --- */
+  --text-display: 2.75rem;
+  --text-display--line-height: 1.1;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.01em;
+
+  --text-h1: 2rem;
+  --text-h1--line-height: 1.2;
+  --text-h1--font-weight: 700;
+
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 1.3;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.4;
+  --text-h3--font-weight: 600;
+
+  --text-h4: 1.0625rem;
+  --text-h4--line-height: 1.4;
+  --text-h4--font-weight: 500;
+
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.6;
+  --text-body-lg--font-weight: 400;
+
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.55;
+  --text-body--font-weight: 400;
+
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 1.5;
+  --text-body-sm--font-weight: 400;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+  --text-caption--font-weight: 500;
+
+  /* --- Raio de borda (prefixo "pa-" — ver aviso acima) --- */
+  --radius-pa-sm: 0.375rem;
+  --radius-pa-md: 0.5rem;
+  --radius-pa-lg: 0.75rem;
+  --radius-pa-xl: 1rem;
+  --radius-pa-full: 9999px;
+
+  /* --- Sombra em camadas, suave e neutra (prefixo "pa-" — ver aviso acima).
+     rgba explícito, não oklch()/color-mix() com alpha — mesma cautela do
+     restante deste arquivo com funções de cor translúcidas. --- */
+  --shadow-pa-sm: 0 1px 2px rgba(10, 14, 18, 0.06), 0 1px 1px rgba(10, 14, 18, 0.04);
+  --shadow-pa-md: 0 2px 4px rgba(10, 14, 18, 0.06), 0 4px 8px rgba(10, 14, 18, 0.06);
+  --shadow-pa-lg: 0 4px 8px rgba(10, 14, 18, 0.07), 0 12px 24px rgba(10, 14, 18, 0.08);
+  --shadow-pa-xl: 0 8px 16px rgba(10, 14, 18, 0.08), 0 24px 48px rgba(10, 14, 18, 0.1);
+}
+
+.painel-admin {
+  font-family: var(--font-workspace);
+  color: var(--color-ink);
+  background: var(--color-surface-alt);
+}
+
+.painel-admin ::selection {
+  background: var(--color-teal-200);
+  color: var(--color-navy-900);
+}
+
+.painel-admin :focus-visible {
+  outline: 2px solid var(--color-navy-500);
+  outline-offset: 2px;
+}
+
+/* --- Campos "crus" (select, textarea) que não usam o componente <Input/> de
+   label flutuante — mesma aparência visual, pra não destoar na mesma tela --- */
+.painel-admin .input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pa-md);
+  padding: 0.5rem 0.875rem;
+  font-size: var(--text-body);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.painel-admin .input:focus {
+  outline: none;
+  border-color: var(--color-navy-500);
+  /* rgba explícito (equivalente a navy-500 a 15%) — mesma cautela já adotada
+     no resto deste arquivo com funções de cor translúcidas */
+  box-shadow: 0 0 0 3px rgba(59, 106, 166, 0.15);
+}
+.painel-admin .label {
+  display: block;
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  margin-bottom: 0.25rem;
+}
+
+/* --- Barra lateral do admin --- */
+.painel-admin .sidebar {
+  background: var(--color-navy-900);
+  color: white;
+}
+.painel-admin .sidebar a {
+  color: rgba(255, 255, 255, 0.75);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.painel-admin .sidebar a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+.painel-admin .sidebar a[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-teal-300);
+  font-weight: 500;
 }

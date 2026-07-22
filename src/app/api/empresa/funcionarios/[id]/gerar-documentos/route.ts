@@ -5,15 +5,7 @@ import { mapearVariaveis } from "@/lib/mapearVariaveis";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { renderizarTemplateEditor, TipTapNode } from '@/lib/renderizar-template-editor'
-
-function sanitizarNomeArquivo(nome: string): string {
-  return nome
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
+import { sanitizarNomeArquivo } from "@/lib/sanitizarNomeArquivo";
 
 export async function POST(
   req: Request,

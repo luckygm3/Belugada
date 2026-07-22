@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { PactaLogo } from "@/components/PactaLogo";
+import { NUMERO_WHATSAPP } from "@/components/BotaoWhatsapp";
 
 export default function LoginPage() {
   const [emailOuLogin, setEmailOuLogin] = useState("");
@@ -33,65 +35,62 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="app-interno min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Link href="/" className="font-bold text-xl">
-            SuaMarca
+        <div className="flex justify-center mb-8">
+          <Link href="/" aria-label="PACTA — início" className="text-[var(--ai-petrol-900)]">
+            <PactaLogo variante="horizontal" idPrefix="login" className="h-10 w-auto" />
           </Link>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
+        <div className="card">
           <h1 className="text-2xl font-bold mb-6">Entrar</h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Usuário ou e-mail
-              </label>
+              <label className="label">Usuário ou e-mail</label>
               <input
                 type="text"
                 value={emailOuLogin}
                 onChange={(e) => setEmailOuLogin(e.target.value)}
                 required
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+                className="input"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Senha
-              </label>
+              <label className="label">Senha</label>
               <input
                 type="password"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 required
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+                className="input"
               />
             </div>
 
             {erro && <p className="text-sm text-red-600">{erro}</p>}
 
-            <button
-              type="submit"
-              disabled={carregando}
-              className="w-full bg-black text-white py-2.5 rounded-md font-medium disabled:opacity-50"
-            >
+            <button type="submit" disabled={carregando} className="btn-primary w-full">
               {carregando ? "Entrando..." : "Entrar"}
             </button>
           </form>
 
           <p className="text-center text-sm mt-4">
-            <a href="/esqueci-senha" className="text-gray-600 hover:text-black">
+            <a href="/esqueci-senha" className="link-acao">
               Esqueci minha senha
             </a>
           </p>
         </div>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm mt-6 text-[var(--ai-ink-suave)]">
           Precisa de acesso?{" "}
-          <a href="https://wa.me/5545998182943" target="_blank" className="text-black underline">
+          <a
+            href={`https://wa.me/${NUMERO_WHATSAPP}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link-acao underline"
+          >
             Fale com a gente pelo WhatsApp
           </a>
         </p>

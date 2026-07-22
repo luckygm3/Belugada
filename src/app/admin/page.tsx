@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import LogoutButton from "@/components/LogoutButton";
+import { Card } from "@/components/ui/Card";
 
 export default async function AdminDashboard() {
   const [totalEmpresas, totalFuncionarios, totalDocsGerados] = await Promise.all([
@@ -8,26 +8,23 @@ export default async function AdminDashboard() {
     prisma.documentoGerado.count(),
   ]);
 
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold dark:text-white">Dashboard</h1>
-        <LogoutButton />
-      </div>
+  const stats = [
+    { rotulo: "Empresas ativas", valor: totalEmpresas },
+    { rotulo: "Funcionários cadastrados", valor: totalFuncionarios },
+    { rotulo: "Documentos gerados", valor: totalDocsGerados },
+  ];
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Empresas ativas</p>
-          <p className="text-3xl font-bold dark:text-white">{totalEmpresas}</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Funcionários cadastrados</p>
-          <p className="text-3xl font-bold dark:text-white">{totalFuncionarios}</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Documentos gerados</p>
-          <p className="text-3xl font-bold dark:text-white">{totalDocsGerados}</p>
-        </div>
+  return (
+    <div className="space-y-6">
+      <h1 className="text-h1 text-ink">Dashboard</h1>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {stats.map((s) => (
+          <Card key={s.rotulo} className="p-6">
+            <p className="text-body-sm text-ink-muted">{s.rotulo}</p>
+            <p className="mt-1 text-h1 text-ink">{s.valor}</p>
+          </Card>
+        ))}
       </div>
     </div>
   );

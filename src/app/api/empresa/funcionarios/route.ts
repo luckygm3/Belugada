@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { cpf } from "cpf-cnpj-validator";
+import { funcionarioSchema } from "@/lib/schemas/funcionario";
+import { primeiraMensagemDeErro, mensagensPorCampo } from "@/lib/schemas/comuns";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -10,14 +11,18 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
+  const validado = funcionarioSchema.safeParse(body);
 
-  if (!cpf.isValid(body.cpf)) {
-    return Response.json({ error: "CPF inválido." }, { status: 400 });
+  if (!validado.success) {
+    return Response.json(
+      { error: primeiraMensagemDeErro(validado.error), campos: mensagensPorCampo(validado.error) },
+      { status: 400 }
+    );
   }
 
-  const cpfLimpo = body.cpf.replace(/\D/g, "");
+  const dados = validado.data;
 
-  const jaExiste = await prisma.funcionario.findUnique({ where: { cpf: cpfLimpo } });
+  const jaExiste = await prisma.funcionario.findUnique({ where: { cpf: dados.cpf } });
   if (jaExiste) {
     return Response.json({ error: "Já existe um funcionário com esse CPF." }, { status: 400 });
   }
@@ -25,25 +30,25 @@ export async function POST(req: Request) {
   const funcionario = await prisma.funcionario.create({
     data: {
       empresaId: session.user.empresaId!,
-      nomeCompleto: body.nomeCompleto,
-      cpf: cpfLimpo,
-      rg: body.rg,
-      dataNascimento: body.dataNascimento ? new Date(body.dataNascimento) : null,
-      estadoCivil: body.estadoCivil,
-      logradouro: body.logradouro,
-      numero: body.numero,
-      bairro: body.bairro,
-      cidade: body.cidade,
-      uf: body.uf,
-      cep: body.cep,
-      telefone: body.telefone,
-      email: body.email,
-      cargo: body.cargo,
-      departamento: body.departamento,
-      dataAdmissao: body.dataAdmissao ? new Date(body.dataAdmissao) : null,
-      tipoContrato: body.tipoContrato,
-      salarioBase: body.salarioBase ? parseFloat(body.salarioBase) : null,
-      dependentes: body.dependentes || [],
+      nomeCompleto: dados.nomeCompleto,
+      cpf: dados.cpf,
+      rg: dados.rg,
+      dataNascimento: dados.dataNascimento ? new Date(dados.dataNascimento) : null,
+      estadoCivil: dados.estadoCivil,
+      logradouro: dados.logradouro,
+      numero: dados.numero,
+      bairro: dados.bairro,
+      cidade: dados.cidade,
+      uf: dados.uf,
+      cep: dados.cep,
+      telefone: dados.telefone,
+      email: dados.email,
+      cargo: dados.cargo,
+      departamento: dados.departamento,
+      dataAdmissao: dados.dataAdmissao ? new Date(dados.dataAdmissao) : null,
+      tipoContrato: dados.tipoContrato,
+      salarioBase: dados.salarioBase ? parseFloat(dados.salarioBase) : null,
+      dependentes: dados.dependentes,
       statusDocumentacao: "PENDENTE",
     },
   });
