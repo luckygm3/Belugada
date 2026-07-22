@@ -24,7 +24,7 @@ export function PactaLogo({ variante = "completo", className, idPrefix }: PactaL
       role="img"
       aria-label="PACTA — Sunt Servanda: os acordos devem ser cumpridos"
       fill="currentColor"
-      style={{ fillRule: "evenodd", clipRule: "evenodd" }}
+      style={{ fillRule: "nonzero", clipRule: "nonzero" }}
     >
       <g id={`${pfx}logo-emblema`}>
         {EMBLEMA_PATHS.map((d, i) => (
