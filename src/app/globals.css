@@ -489,6 +489,23 @@ html.lenis body {
   background: var(--color-surface-alt);
 }
 
+/* --- Tema escuro do painel admin/empresa ---
+   A classe ".dark" fica só na própria div ".painel-admin" (ver
+   src/components/PainelAdminShell.tsx) — nunca em <html>/<body>, que
+   persistem entre navegações client-side do Next e vazariam pra fora das
+   rotas internas (landing, login). Como o sistema já é construído sobre
+   variáveis CSS semânticas, redefinir essas variáveis aqui basta pra cobrir
+   a maior parte da UI sem tocar em componente nenhum — mesma paleta
+   navy/teal/slate já definida acima, só reatribuída pro fundo escuro.
+   A sidebar (navy-900) fica igual nos dois temas, de propósito. */
+.painel-admin.dark {
+  --color-surface: var(--color-slate-800);
+  --color-surface-alt: var(--color-slate-900);
+  --color-border: var(--color-slate-700);
+  --color-ink: var(--color-slate-50);
+  --color-ink-muted: var(--color-slate-400);
+}
+
 .painel-admin ::selection {
   background: var(--color-teal-200);
   color: var(--color-navy-900);
