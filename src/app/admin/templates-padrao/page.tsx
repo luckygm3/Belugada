@@ -15,6 +15,8 @@ export default async function TemplatesPadraoPage() {
     origem: t.origem,
     arquivoOriginalUrl: t.arquivoOriginalUrl,
     variaveisDetectadas: t.variaveisDetectadas,
+    variavelVencimento: t.variavelVencimento,
+    diasAlertaVencimento: t.diasAlertaVencimento,
     createdAt: t.createdAt.toISOString(),
     empresa: t.empresa ? { razaoSocial: t.empresa.razaoSocial } : null,
   }));

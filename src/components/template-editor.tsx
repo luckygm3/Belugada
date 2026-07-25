@@ -81,7 +81,7 @@ async function handleSalvar() {
             key={v.key}
             draggable
             onDragStart={(e) => handleDragStart(e, v)}
-            className="cursor-grab rounded-pa-md border border-border bg-surface-alt px-3 py-2 text-body-sm text-ink transition-colors hover:bg-slate-100 active:cursor-grabbing"
+            className="cursor-grab rounded-pa-md border border-border bg-surface-alt px-3 py-2 text-body-sm text-ink transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 active:cursor-grabbing"
           >
             {v.label}
           </div>

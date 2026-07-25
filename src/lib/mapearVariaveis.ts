@@ -28,6 +28,7 @@ export function mapearVariaveis(funcionario: Funcionario, empresa: Empresa) {
     cargo: funcionario.cargo || "",
     departamento: funcionario.departamento || "",
     data_admissao: formatarData(funcionario.dataAdmissao),
+    data_termino_contrato: formatarData(funcionario.dataTerminoContrato),
     tipo_contrato: funcionario.tipoContrato || "",
     salario_base: formatarMoeda(funcionario.salarioBase),
     jornada_trabalho: funcionario.jornadaTrabalho || "",

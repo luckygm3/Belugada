@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { UploadTemplateDropzone } from "./UploadTemplateDropzone";
+import { ConfigurarVencimentoModal } from "./ConfigurarVencimentoModal";
 
 export interface TemplateBiblioteca {
   id: string;
@@ -14,6 +15,8 @@ export interface TemplateBiblioteca {
   origem: "UPLOAD" | "EDITOR";
   arquivoOriginalUrl: string | null;
   variaveisDetectadas: string[];
+  variavelVencimento: string | null;
+  diasAlertaVencimento: number[];
   createdAt: string; // ISO — serializado do server component
   empresa: { razaoSocial: string } | null;
 }
@@ -52,7 +55,7 @@ function enviarViaXhr(url: string, formData: FormData, aoProgredir: (percentual:
 
 function IconeDocx({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className ?? "h-6 w-6 text-navy-600"} aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" className={className ?? "h-6 w-6 text-navy-600 dark:text-navy-400"} aria-hidden="true">
       <path d="M6 2.5h8l4 4V21a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       <path d="M14 2.5V6a1 1 0 0 0 1 1h3.5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       <path d="M8.5 12.5h7M8.5 15.5h7M8.5 18.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -62,7 +65,7 @@ function IconeDocx({ className }: { className?: string }) {
 
 function IconeEditor({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className ?? "h-6 w-6 text-teal-600"} aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" className={className ?? "h-6 w-6 text-teal-600 dark:text-teal-400"} aria-hidden="true">
       <path d="M6 2.5h8l4 4V21a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       <path d="M14 2.5V6a1 1 0 0 0 1 1h3.5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       <path d="M9 17.5l1-3.2 5.3-5.3a1 1 0 0 1 1.4 0l.8.8a1 1 0 0 1 0 1.4L12.2 16.5l-3.2 1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
@@ -106,7 +109,9 @@ function Distintivo({ tipo }: { tipo: TemplateBiblioteca["tipo"] }) {
     <span
       className={[
         "shrink-0 rounded-pa-full px-2 py-0.5 text-caption font-medium",
-        tipo === "PADRAO" ? "bg-navy-50 text-navy-700" : "bg-teal-50 text-teal-700",
+        tipo === "PADRAO"
+          ? "bg-navy-50 text-navy-700 dark:bg-navy-900 dark:text-navy-200"
+          : "bg-teal-50 text-teal-700 dark:bg-teal-900 dark:text-teal-200",
       ].join(" ")}
     >
       {tipo === "PADRAO" ? "Padrão" : "Personalizado"}
@@ -147,7 +152,7 @@ function MenuAcoes({ acoes }: { acoes: AcaoMenu[] }) {
         aria-label="Ações do template"
         aria-haspopup="menu"
         aria-expanded={aberto}
-        className="rounded-pa-md p-1.5 text-ink-muted transition-colors hover:bg-slate-100 hover:text-ink"
+        className="rounded-pa-md p-1.5 text-ink-muted transition-colors hover:bg-slate-100 hover:text-ink dark:hover:bg-slate-700"
       >
         <IconePontos />
       </button>
@@ -165,7 +170,7 @@ function MenuAcoes({ acoes }: { acoes: AcaoMenu[] }) {
                 acao.onClick();
               }}
               className={[
-                "block w-full px-3 py-2 text-left text-body-sm transition-colors hover:bg-slate-50",
+                "block w-full px-3 py-2 text-left text-body-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-700",
                 acao.tom === "perigo" ? "text-red-600" : "text-ink",
               ].join(" ")}
             >
@@ -178,25 +183,47 @@ function MenuAcoes({ acoes }: { acoes: AcaoMenu[] }) {
   );
 }
 
-function acoesPara(t: TemplateBiblioteca, aoBaixar: () => void, aoRemover: () => void): AcaoMenu[] {
+function acoesPara(
+  t: TemplateBiblioteca,
+  aoBaixar: () => void,
+  aoRemover: () => void,
+  aoConfigurarVencimento: () => void
+): AcaoMenu[] {
   const acoes: AcaoMenu[] = [];
   if (t.origem === "UPLOAD" && t.arquivoOriginalUrl) {
     acoes.push({ rotulo: "Baixar arquivo original", onClick: aoBaixar });
   }
+  acoes.push({ rotulo: "Configurar vencimento", onClick: aoConfigurarVencimento });
   acoes.push({ rotulo: "Remover", onClick: aoRemover, tom: "perigo" });
   return acoes;
 }
 
-function CartaoTemplate({ t, aoBaixar, aoRemover }: { t: TemplateBiblioteca; aoBaixar: () => void; aoRemover: () => void }) {
+function DistintivoVencimento({ variavel }: { variavel: string | null }) {
+  if (!variavel) return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-pa-full bg-amber-50 px-2 py-0.5 text-caption font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+      Vence: {variavel}
+    </span>
+  );
+}
+
+interface AcoesTemplate {
+  aoBaixar: () => void;
+  aoRemover: () => void;
+  aoConfigurarVencimento: () => void;
+}
+
+function CartaoTemplate({ t, aoBaixar, aoRemover, aoConfigurarVencimento }: { t: TemplateBiblioteca } & AcoesTemplate) {
   return (
     <Card className="flex h-full flex-col p-4">
       <div className="flex items-start justify-between gap-2">
         {t.origem === "UPLOAD" ? <IconeDocx /> : <IconeEditor />}
-        <MenuAcoes acoes={acoesPara(t, aoBaixar, aoRemover)} />
+        <MenuAcoes acoes={acoesPara(t, aoBaixar, aoRemover, aoConfigurarVencimento)} />
       </div>
       <p className="mt-3 line-clamp-2 text-body font-medium text-ink">{t.nome}</p>
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <Distintivo tipo={t.tipo} />
+        <DistintivoVencimento variavel={t.variavelVencimento} />
       </div>
       <div className="mt-auto flex flex-col gap-1 pt-4 text-body-sm text-ink-muted">
         <span>{formatarData(t.createdAt)}</span>
@@ -206,15 +233,20 @@ function CartaoTemplate({ t, aoBaixar, aoRemover }: { t: TemplateBiblioteca; aoB
   );
 }
 
-function LinhaTemplate({ t, aoBaixar, aoRemover }: { t: TemplateBiblioteca; aoBaixar: () => void; aoRemover: () => void }) {
+function LinhaTemplate({ t, aoBaixar, aoRemover, aoConfigurarVencimento }: { t: TemplateBiblioteca } & AcoesTemplate) {
   return (
     <Card className="flex items-center gap-3 px-4 py-3">
-      {t.origem === "UPLOAD" ? <IconeDocx className="h-5 w-5 shrink-0 text-navy-600" /> : <IconeEditor className="h-5 w-5 shrink-0 text-teal-600" />}
+      {t.origem === "UPLOAD" ? (
+        <IconeDocx className="h-5 w-5 shrink-0 text-navy-600 dark:text-navy-400" />
+      ) : (
+        <IconeEditor className="h-5 w-5 shrink-0 text-teal-600 dark:text-teal-400" />
+      )}
       <p className="min-w-0 flex-1 truncate text-body font-medium text-ink">{t.nome}</p>
       <Distintivo tipo={t.tipo} />
+      <DistintivoVencimento variavel={t.variavelVencimento} />
       <span className="w-24 shrink-0 text-body-sm text-ink-muted">{formatarData(t.createdAt)}</span>
       <span className="w-40 shrink-0 truncate text-body-sm text-ink-muted">{t.empresa?.razaoSocial ?? "—"}</span>
-      <MenuAcoes acoes={acoesPara(t, aoBaixar, aoRemover)} />
+      <MenuAcoes acoes={acoesPara(t, aoBaixar, aoRemover, aoConfigurarVencimento)} />
     </Card>
   );
 }
@@ -224,6 +256,7 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
   const reduzMovimento = useReducedMotion();
   const [templates, setTemplates] = useState(templatesIniciais);
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("grid");
+  const [templateConfigurando, setTemplateConfigurando] = useState<TemplateBiblioteca | null>(null);
 
   useEffect(() => {
     const salva = sessionStorage.getItem(CHAVE_SESSAO);
@@ -262,6 +295,13 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
     setTemplates((atual) => atual.filter((item) => item.id !== t.id));
   }
 
+  function aplicarVencimentoAtualizado(
+    id: string,
+    atualizado: { variavelVencimento: string | null; diasAlertaVencimento: number[] }
+  ) {
+    setTemplates((atual) => atual.map((item) => (item.id === id ? { ...item, ...atualizado } : item)));
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -287,7 +327,7 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
             onClick={() => trocarVisualizacao("grid")}
             aria-label="Ver em grade"
             aria-pressed={visualizacao === "grid"}
-            className={`p-2 transition-colors ${visualizacao === "grid" ? "bg-navy-600 text-white" : "bg-surface text-ink-muted hover:bg-slate-50"}`}
+            className={`p-2 transition-colors ${visualizacao === "grid" ? "bg-navy-600 text-white" : "bg-surface text-ink-muted hover:bg-slate-50 dark:hover:bg-slate-700"}`}
           >
             <IconeGrade ativo={visualizacao === "grid"} />
           </button>
@@ -295,7 +335,7 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
             onClick={() => trocarVisualizacao("lista")}
             aria-label="Ver em lista"
             aria-pressed={visualizacao === "lista"}
-            className={`p-2 transition-colors ${visualizacao === "lista" ? "bg-navy-600 text-white" : "bg-surface text-ink-muted hover:bg-slate-50"}`}
+            className={`p-2 transition-colors ${visualizacao === "lista" ? "bg-navy-600 text-white" : "bg-surface text-ink-muted hover:bg-slate-50 dark:hover:bg-slate-700"}`}
           >
             <IconeLista ativo={visualizacao === "lista"} />
           </button>
@@ -315,13 +355,31 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
           {templates.map((t) => (
             <motion.div key={t.id} layout transition={{ duration: reduzMovimento ? 0 : 0.3, ease: "easeOut" }}>
               {visualizacao === "grid" ? (
-                <CartaoTemplate t={t} aoBaixar={() => baixarArquivo(t)} aoRemover={() => removerTemplate(t)} />
+                <CartaoTemplate
+                  t={t}
+                  aoBaixar={() => baixarArquivo(t)}
+                  aoRemover={() => removerTemplate(t)}
+                  aoConfigurarVencimento={() => setTemplateConfigurando(t)}
+                />
               ) : (
-                <LinhaTemplate t={t} aoBaixar={() => baixarArquivo(t)} aoRemover={() => removerTemplate(t)} />
+                <LinhaTemplate
+                  t={t}
+                  aoBaixar={() => baixarArquivo(t)}
+                  aoRemover={() => removerTemplate(t)}
+                  aoConfigurarVencimento={() => setTemplateConfigurando(t)}
+                />
               )}
             </motion.div>
           ))}
         </div>
+      )}
+
+      {templateConfigurando && (
+        <ConfigurarVencimentoModal
+          template={templateConfigurando}
+          onFechar={() => setTemplateConfigurando(null)}
+          onSalvar={aplicarVencimentoAtualizado}
+        />
       )}
     </div>
   );

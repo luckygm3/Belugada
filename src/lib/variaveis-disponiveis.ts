@@ -21,6 +21,7 @@ export const VARIAVEIS_DISPONIVEIS: VariavelDisponivel[] = [
   { key: "cargo", label: "Cargo" },
   { key: "departamento", label: "Departamento" },
   { key: "data_admissao", label: "Data de Admissão" },
+  { key: "data_termino_contrato", label: "Data de Término do Contrato" },
   { key: "tipo_contrato", label: "Tipo de Contrato" },
   { key: "salario_base", label: "Salário Base" },
   { key: "jornada_trabalho", label: "Jornada de Trabalho" },

@@ -39,7 +39,7 @@ function IconeNuvemUpload() {
 
 function IconeSoltarAqui() {
   return (
-    <svg viewBox="0 0 40 40" fill="none" className="h-9 w-9 text-navy-600" aria-hidden="true">
+    <svg viewBox="0 0 40 40" fill="none" className="h-9 w-9 text-navy-600 dark:text-navy-400" aria-hidden="true">
       <rect x="7" y="21" width="26" height="10" rx="2" stroke="currentColor" strokeWidth="1.8" />
       <path d="M20 6v16m0 0l-5-5m5 5l5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -48,7 +48,7 @@ function IconeSoltarAqui() {
 
 function IconeDocumento({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className ?? "h-8 w-8 text-navy-600"} aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" className={className ?? "h-8 w-8 text-navy-600 dark:text-navy-400"} aria-hidden="true">
       <path
         d="M6 2.5h8l4 4V21a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5z"
         stroke="currentColor"
@@ -175,7 +175,9 @@ export function UploadTemplateDropzone({ aoEnviar, className }: UploadTemplateDr
           onDrop={aoSoltar}
           className={[
             "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-pa-lg border-2 border-dashed p-10 text-center transition-colors duration-150",
-            arrastando ? "border-navy-500 bg-navy-50" : "border-border bg-surface-alt hover:border-slate-300",
+            arrastando
+              ? "border-navy-500 bg-navy-50 dark:bg-navy-900"
+              : "border-border bg-surface-alt hover:border-slate-300 dark:hover:border-slate-600",
           ].join(" ")}
         >
           <AnimatePresence mode="wait" initial={false}>
