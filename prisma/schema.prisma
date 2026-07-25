@@ -31,6 +31,14 @@ enum StatusPagamento {
   CANCELADO
 }
 
+enum TipoAtividade {
+  CRIACAO
+  EDICAO
+  EXCLUSAO
+  GERACAO_DOCUMENTO
+  VENCIMENTO_PROXIMO
+}
+
 model Usuario {
   id           String   @id @default(cuid())
   emailOuLogin String   @unique
@@ -41,6 +49,32 @@ model Usuario {
   createdAt    DateTime @default(now())
   tokenReset       String?
   tokenResetExpira DateTime?
+
+  // Configurações pessoais vinculadas à conta (tema, idioma, filtros salvos...).
+  // JSON, não tabela separada: cresce por chave sem migration a cada preferência
+  // nova, e ninguém precisa consultar isso além do próprio dono da conta —
+  // ver src/lib/preferencias.ts pro shape validado em Zod.
+  preferencias Json?
+
+  notificacoes Notificacao[]
+  consentimentosCookies ConsentimentoCookies[]
+}
+
+// Registro de auditoria do consentimento de cookies (LGPD) — um registro por
+// escolha feita (aceitar/recusar/personalizar), não sobrescrito, pra
+// preservar histórico. usuarioId fica null quase sempre (visitante anônimo
+// da landing, que não tem conta) — só é preenchido no raro caso de alguém
+// já logado revisitar a landing e mexer nas preferências de cookies.
+model ConsentimentoCookies {
+  id           String   @id @default(cuid())
+  essenciais   Boolean  @default(true)
+  preferencias Boolean
+  analytics    Boolean
+  usuarioId    String?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id])
+  criadoEm     DateTime @default(now())
+
+  @@index([criadoEm])
 }
 
 model Empresa {
@@ -79,6 +113,7 @@ model Empresa {
   usuarios     Usuario[]
   funcionarios Funcionario[]
   templates    TemplateDocumento[]
+  notificacoes Notificacao[]
   createdAt    DateTime @default(now())
 }
 
@@ -121,6 +156,7 @@ model Funcionario {
   dependentes         Json?
   statusDocumentacao  StatusDocumentacao @default(PENDENTE)
   dataUltimaGeracao   DateTime?
+  dataTerminoContrato DateTime?
 
   documentosGerados   DocumentoGerado[]
   createdAt           DateTime @default(now())
@@ -154,6 +190,11 @@ model TemplateDocumento {
   variaveisDetectadas String[]
   ativo               Boolean      @default(true)
 
+  // Vencimento: qual variável [[chave]] representa a data-limite deste tipo de
+  // documento (ex: "data_termino_contrato"). Null = documento sem vencimento.
+  variavelVencimento    String?
+  diasAlertaVencimento  Int[]      @default([])
+
   empresasQueUsam EmpresaTemplatePadrao[]
   empresasQueUsamPersonalizado EmpresaTemplatePersonalizado[]
   documentosGerados   DocumentoGerado[]
@@ -169,6 +210,13 @@ model DocumentoGerado {
   urlPdf              String?
   statusAssinatura    String?
   dataGeracao         DateTime @default(now())
+
+  // Resolvida a partir de template.variavelVencimento no momento da geração —
+  // é um snapshot, não recalculada depois (o documento já foi emitido com essa data).
+  dataVencimento      DateTime?
+  alertasEnviados     AlertaVencimentoEnviado[]
+
+  @@index([dataVencimento])
 }
 
 model EmpresaTemplatePadrao {
@@ -180,4 +228,44 @@ model EmpresaTemplatePadrao {
   createdAt  DateTime @default(now())
 
   @@unique([empresaId, templateId])
+}
+
+// Log de atividades da empresa-cliente + central de notificações compartilhada
+// entre todos os admins (leitura não é por usuário — é uma única lista central).
+model Notificacao {
+  id          String        @id @default(cuid())
+  tipo        TipoAtividade
+  descricao   String
+  // entidade/entidadeId são só informativos (sem FK): a ação pode se referir a um
+  // registro já excluído (ex: notificação de exclusão de funcionário), então uma
+  // FK real quebraria ou exigiria cascade que apagaria o próprio histórico.
+  entidade    String
+  entidadeId  String?
+  empresaId   String
+  empresa     Empresa       @relation(fields: [empresaId], references: [id])
+  usuarioId   String?
+  usuario     Usuario?      @relation(fields: [usuarioId], references: [id])
+  lida        Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  // Só preenchido em tipo = VENCIMENTO_PROXIMO: o marco (30/15/7...) que disparou
+  // este alerta, usado pra estilizar urgência na UI sem precisar reprocessar texto.
+  diasAntecedencia Int?
+
+  @@index([empresaId])
+  @@index([lida])
+  @@index([createdAt])
+}
+
+// Idempotência dos alertas de vencimento: um registro por (documento, marco) já
+// notificado. A unique constraint garante, no banco, que o cron nunca duplica um
+// alerta mesmo rodando mais de uma vez — ao contrário de um array na aplicação.
+model AlertaVencimentoEnviado {
+  id                String          @id @default(cuid())
+  documentoGeradoId String
+  documentoGerado   DocumentoGerado @relation(fields: [documentoGeradoId], references: [id], onDelete: Cascade)
+  diasAntecedencia  Int
+  enviadoEm         DateTime        @default(now())
+
+  @@unique([documentoGeradoId, diasAntecedencia])
 }
