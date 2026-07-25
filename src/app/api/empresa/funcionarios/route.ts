@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { funcionarioSchema } from "@/lib/schemas/funcionario";
 import { primeiraMensagemDeErro, mensagensPorCampo } from "@/lib/schemas/comuns";
+import { registrarAtividade } from "@/lib/registrarAtividade";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -46,11 +47,21 @@ export async function POST(req: Request) {
       cargo: dados.cargo,
       departamento: dados.departamento,
       dataAdmissao: dados.dataAdmissao ? new Date(dados.dataAdmissao) : null,
+      dataTerminoContrato: dados.dataTerminoContrato ? new Date(dados.dataTerminoContrato) : null,
       tipoContrato: dados.tipoContrato,
       salarioBase: dados.salarioBase ? parseFloat(dados.salarioBase) : null,
       dependentes: dados.dependentes,
       statusDocumentacao: "PENDENTE",
     },
+  });
+
+  await registrarAtividade({
+    tipo: "CRIACAO",
+    descricao: `${funcionario.nomeCompleto} foi cadastrado como funcionário.`,
+    entidade: "Funcionario",
+    entidadeId: funcionario.id,
+    empresaId: session.user.empresaId!,
+    usuarioId: session.user.id,
   });
 
   return Response.json({ funcionarioId: funcionario.id });

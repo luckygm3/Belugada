@@ -6,6 +6,8 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { renderizarTemplateEditor, TipTapNode } from '@/lib/renderizar-template-editor'
 import { sanitizarNomeArquivo } from "@/lib/sanitizarNomeArquivo";
+import { registrarAtividade } from "@/lib/registrarAtividade";
+import { obterDataVencimento } from "@/lib/obterDataVencimento";
 
 export async function POST(
   req: Request,
@@ -73,6 +75,7 @@ export async function POST(
         funcionarioId,
         templateId,
         urlPdf: caminhoSaida, // guarda o caminho do .docx, igual ao caminho UPLOAD
+        dataVencimento: obterDataVencimento(funcionario, template.variavelVencimento),
       },
     });
 
@@ -132,6 +135,7 @@ export async function POST(
           funcionarioId,
           templateId,
           urlPdf: caminhoSaida,
+          dataVencimento: obterDataVencimento(funcionario, template.variavelVencimento),
         },
       });
 
@@ -145,6 +149,21 @@ export async function POST(
     where: { id: funcionarioId },
     data: { statusDocumentacao: "COMPLETO", dataUltimaGeracao: new Date() },
   });
+
+  const gerados = resultados.filter((r) => r.ok).map((r) => r.template);
+  if (gerados.length > 0) {
+    await registrarAtividade({
+      tipo: "GERACAO_DOCUMENTO",
+      descricao:
+        gerados.length === 1
+          ? `Documento "${gerados[0]}" gerado para ${funcionario.nomeCompleto}.`
+          : `${gerados.length} documentos gerados para ${funcionario.nomeCompleto}: ${gerados.join(", ")}.`,
+      entidade: "Funcionario",
+      entidadeId: funcionarioId,
+      empresaId: funcionario.empresaId,
+      usuarioId: session.user.id,
+    });
+  }
 
   return Response.json({ resultados });
 }

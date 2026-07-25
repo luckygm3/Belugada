@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { funcionarioSchema } from "@/lib/schemas/funcionario";
 import { primeiraMensagemDeErro, mensagensPorCampo } from "@/lib/schemas/comuns";
+import { registrarAtividade } from "@/lib/registrarAtividade";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -53,10 +54,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       cargo: dados.cargo,
       departamento: dados.departamento,
       dataAdmissao: dados.dataAdmissao ? new Date(dados.dataAdmissao) : null,
+      dataTerminoContrato: dados.dataTerminoContrato ? new Date(dados.dataTerminoContrato) : null,
       tipoContrato: dados.tipoContrato,
       salarioBase: dados.salarioBase ? parseFloat(dados.salarioBase) : null,
       dependentes: dados.dependentes,
     },
+  });
+
+  await registrarAtividade({
+    tipo: "EDICAO",
+    descricao: `${dados.nomeCompleto} teve o cadastro atualizado.`,
+    entidade: "Funcionario",
+    entidadeId: id,
+    empresaId: session.user.empresaId!,
+    usuarioId: session.user.id,
   });
 
   return Response.json({ funcionarioId: id });
@@ -103,6 +114,15 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     prisma.documentoGerado.deleteMany({ where: { funcionarioId: id } }),
     prisma.funcionario.delete({ where: { id } }),
   ]);
+
+  await registrarAtividade({
+    tipo: "EXCLUSAO",
+    descricao: `${funcionario.nomeCompleto} foi excluído.`,
+    entidade: "Funcionario",
+    entidadeId: id,
+    empresaId: session.user.empresaId!,
+    usuarioId: session.user.id,
+  });
 
   return Response.json({ ok: true });
 }

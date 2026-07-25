@@ -1,10 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { GeracaoDocumentosProgress, type EstadoGeracaoDocumentos } from "@/components/GeracaoDocumentosProgress";
 
 interface Template {
   id: string;
   nome: string;
+}
+
+interface ResultadoGeracao {
+  template: string;
+  caminho?: string;
+  erro?: string;
+  ok?: boolean;
 }
 
 export default function GerarDocumentosForm({
@@ -15,8 +25,9 @@ export default function GerarDocumentosForm({
   templatesDisponiveis: Template[];
 }) {
   const [selecionados, setSelecionados] = useState<string[]>(templatesDisponiveis.map((t) => t.id));
-  const [gerando, setGerando] = useState(false);
-  const [resultados, setResultados] = useState<any[]>([]);
+  const [estadoGeracao, setEstadoGeracao] = useState<EstadoGeracaoDocumentos | null>(null);
+  const [resultados, setResultados] = useState<ResultadoGeracao[]>([]);
+  const [mensagemErro, setMensagemErro] = useState("");
   const [baixandoTodos, setBaixandoTodos] = useState(false);
 
   const gerados = resultados.filter((r) => r.ok);
@@ -26,18 +37,31 @@ export default function GerarDocumentosForm({
   }
 
   async function gerar() {
-    setGerando(true);
+    setEstadoGeracao("gerando");
     setResultados([]);
+    setMensagemErro("");
 
-    const res = await fetch(`/api/empresa/funcionarios/${funcionarioId}/gerar-documentos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ templateIds: selecionados }),
-    });
+    try {
+      const res = await fetch(`/api/empresa/funcionarios/${funcionarioId}/gerar-documentos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateIds: selecionados }),
+      });
 
-    const data = await res.json();
-    setResultados(data.resultados || []);
-    setGerando(false);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMensagemErro(data.error || "Erro ao gerar documentos.");
+        setEstadoGeracao("erro");
+        return;
+      }
+
+      setResultados(data.resultados || []);
+      setEstadoGeracao("concluido");
+    } catch {
+      setMensagemErro("Erro de rede ao gerar documentos.");
+      setEstadoGeracao("erro");
+    }
   }
 
   async function baixar(caminho: string) {
@@ -54,7 +78,7 @@ export default function GerarDocumentosForm({
     if (!res.ok) {
       setBaixandoTodos(false);
       const data = await res.json().catch(() => ({}));
-      alert(data.error || "Erro ao montar o arquivo .zip.");
+      setMensagemErro(data.error || "Erro ao montar o arquivo .zip.");
       return;
     }
 
@@ -76,56 +100,76 @@ export default function GerarDocumentosForm({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-6">
-      <h2 className="font-semibold mb-4 dark:text-white">Gerar documentos</h2>
-
-      <ul className="space-y-2 mb-4">
-        {templatesDisponiveis.map((t) => (
-          <li key={t.id} className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id={`gerar-${t.id}`}
-              checked={selecionados.includes(t.id)}
-              onChange={() => alternar(t.id)}
-            />
-            <label htmlFor={`gerar-${t.id}`} className="text-sm dark:text-gray-200">{t.nome}</label>
-          </li>
-        ))}
-      </ul>
-
-      <button
-        onClick={gerar}
-        disabled={gerando || selecionados.length === 0}
-        className="bg-black text-white px-4 py-2 rounded-md text-sm"
-      >
-        {gerando ? `Gerando ${selecionados.length} documento(s)...` : `Gerar ${selecionados.length} documento(s)`}
-      </button>
-
-      {resultados.length > 0 && (
-        <div className="mt-6 border-t dark:border-gray-600 pt-4 space-y-2">
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={baixarTodos}
-              disabled={gerados.length === 0 || baixandoTodos}
-              className="text-sm border rounded-md px-3 py-1.5 dark:border-gray-600 dark:text-white disabled:opacity-50"
-            >
-              {baixandoTodos ? "Montando .zip..." : "Baixar todos"}
-            </button>
-          </div>
-          {resultados.map((r, i) => (
-            <div key={i} className="flex items-center justify-between text-sm">
-              <span className="dark:text-gray-200">{r.template}</span>
-              {r.ok ? (
-                <button onClick={() => baixar(r.caminho)} className="text-blue-600 hover:underline">
-                  Baixar
-                </button>
-              ) : (
-                <span className="text-red-600 text-xs">{r.erro}</span>
-              )}
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Gerar documentos</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <ul className="space-y-2">
+          {templatesDisponiveis.map((t) => (
+            <li key={t.id} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id={`gerar-${t.id}`}
+                checked={selecionados.includes(t.id)}
+                onChange={() => alternar(t.id)}
+                className="accent-navy-600"
+              />
+              <label htmlFor={`gerar-${t.id}`} className="text-body-sm text-ink">
+                {t.nome}
+              </label>
+            </li>
           ))}
-        </div>
-      )}
-    </div>
+        </ul>
+
+        <Button
+          variant="primary"
+          className="text-body-sm"
+          onClick={gerar}
+          disabled={estadoGeracao === "gerando" || selecionados.length === 0}
+          loading={estadoGeracao === "gerando"}
+        >
+          {estadoGeracao === "gerando"
+            ? `Gerando ${selecionados.length} documento(s)...`
+            : `Gerar ${selecionados.length} documento(s)`}
+        </Button>
+
+        {estadoGeracao && (
+          <GeracaoDocumentosProgress
+            estado={estadoGeracao}
+            mensagemErro={mensagemErro}
+            onBaixar={gerados.length > 0 ? baixarTodos : undefined}
+            onTentarNovamente={() => setEstadoGeracao(null)}
+          />
+        )}
+
+        {resultados.length > 0 && (
+          <div className="space-y-2 border-t border-border pt-4">
+            <div className="mb-2 flex justify-end">
+              <Button
+                variant="secondary"
+                className="text-body-sm"
+                onClick={baixarTodos}
+                disabled={gerados.length === 0 || baixandoTodos}
+              >
+                {baixandoTodos ? "Montando .zip..." : "Baixar todos"}
+              </Button>
+            </div>
+            {resultados.map((r, i) => (
+              <div key={i} className="flex items-center justify-between text-body-sm">
+                <span className="text-ink">{r.template}</span>
+                {r.ok && r.caminho ? (
+                  <button onClick={() => baixar(r.caminho!)} className="text-navy-600 hover:text-navy-700 dark:text-navy-300 dark:hover:text-navy-200 hover:underline">
+                    Baixar
+                  </button>
+                ) : (
+                  <span className="text-caption text-red-600">{r.erro}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
