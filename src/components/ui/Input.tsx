@@ -19,7 +19,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
  * fixo em outros componentes de formulário.
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, error, className, value, onFocus, onBlur, id: idProp, ...props },
+  { label, error, className, value, onFocus, onBlur, id: idProp, placeholder, type, ...props },
   ref
 ) {
   const idGerado = useId();
@@ -28,7 +28,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
   const [focado, setFocado] = useState(false);
   const temValor = value !== undefined && value !== null && String(value).length > 0;
-  const flutuando = focado || temValor;
+  // Campos de data sempre mostram um hint nativo do navegador ("dd/mm/aaaa")
+  // no espaço vazio, mesmo sem foco — não dá pra suprimir isso via CSS/props,
+  // então o label desses campos fica sempre na posição flutuante (não
+  // centralizada) pra nunca competir visualmente com esse hint.
+  const flutuando = focado || temValor || type === "date";
 
   return (
     <div className="w-full">
@@ -36,7 +40,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         <input
           ref={ref}
           id={id}
+          type={type}
           value={value}
+          // O placeholder só aparece com o campo em foco (dica de formato
+          // enquanto o usuário digita) — mostrado o tempo todo, ele ocupa o
+          // mesmo espaço do label em repouso (centralizado) e os dois textos
+          // se sobrepõem visualmente.
+          placeholder={focado ? placeholder : undefined}
           onFocus={(e) => {
             setFocado(true);
             onFocus?.(e);
@@ -62,7 +72,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           className={[
             "pointer-events-none absolute left-3.5 transition-all duration-150 ease-out",
             flutuando ? "top-1.5 text-caption" : "top-1/2 -translate-y-1/2 text-body-lg",
-            error ? "text-red-600" : focado ? "text-navy-600" : "text-ink-muted",
+            error ? "text-red-600" : focado ? "text-navy-600 dark:text-navy-300" : "text-ink-muted",
           ].join(" ")}
         >
           {label}

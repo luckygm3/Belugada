@@ -43,7 +43,7 @@ export function ProgressBar({
       aria-valuemax={100}
       aria-valuenow={indeterminate ? undefined : Math.round(valorClamped)}
       {...aria}
-      className={`relative h-2 w-full overflow-hidden rounded-pa-full bg-slate-200 ${className ?? ""}`}
+      className={`relative h-2 w-full overflow-hidden rounded-pa-full bg-slate-200 dark:bg-slate-700 ${className ?? ""}`}
     >
       {indeterminate ? (
         <motion.div

@@ -1,7 +1,17 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import LogoutButton from "@/components/LogoutButton";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { Sidebar } from "@/components/Sidebar";
+import { Topbar } from "@/components/Topbar";
+import { PainelAdminShell } from "@/components/PainelAdminShell";
+import { TEMA_COOKIE, temaValido } from "@/lib/tema";
+import { lerPreferencias } from "@/lib/preferencias";
+
+const LINKS = [
+  { href: "/empresa", rotulo: "Funcionários" },
+  { href: "/empresa/funcionarios/novo", rotulo: "+ Novo funcionário" },
+];
 
 export default async function EmpresaLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -10,17 +20,23 @@ export default async function EmpresaLayout({ children }: { children: React.Reac
     redirect("/login");
   }
 
+  const [cookieStore, usuario] = await Promise.all([
+    cookies(),
+    prisma.usuario.findUnique({ where: { id: session.user.id }, select: { preferencias: true } }),
+  ]);
+
+  // Preferência salva na conta vence o cookie local do navegador — é assim
+  // que a escolha de tema acompanha o usuário pra outro dispositivo.
+  const preferencias = lerPreferencias(usuario?.preferencias);
+  const tema = preferencias.tema ?? temaValido(cookieStore.get(TEMA_COOKIE)?.value);
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-56 bg-gray-900 dark:bg-black text-white flex flex-col p-4 shrink-0">
-        <div className="font-bold text-lg mb-8">Painel da Empresa</div>
-        <nav className="flex flex-col gap-2 text-sm flex-1">
-          <Link href="/empresa" className="hover:bg-gray-800 rounded px-3 py-2">Funcionários</Link>
-          <Link href="/empresa/funcionarios/novo" className="hover:bg-gray-800 rounded px-3 py-2">+ Novo funcionário</Link>
-        </nav>
-        <LogoutButton />
-      </aside>
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 p-8">{children}</main>
-    </div>
+    <PainelAdminShell temaInicial={tema}>
+      <Sidebar links={LINKS} hrefInicio="/empresa" idPrefix="empresa-sidebar" />
+      <main className="flex-1 p-8">
+        <Topbar escopo="empresa" nomeUsuario={session.user.email ?? "Empresa"} />
+        {children}
+      </main>
+    </PainelAdminShell>
   );
 }

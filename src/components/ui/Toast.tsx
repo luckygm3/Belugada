@@ -60,7 +60,7 @@ export function Toast({ aberto, variant = "success", titulo, descricao, acao, on
             {acao && (
               <button
                 onClick={acao.onClick}
-                className="mt-2 text-body-sm font-medium text-navy-600 hover:text-navy-700 hover:underline"
+                className="mt-2 text-body-sm font-medium text-navy-600 hover:text-navy-700 dark:text-navy-300 dark:hover:text-navy-200 hover:underline"
               >
                 {acao.rotulo}
               </button>

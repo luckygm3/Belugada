@@ -47,6 +47,7 @@ export const funcionarioSchema = z.object({
   cargo: textoOpcional,
   departamento: textoOpcional,
   dataAdmissao: z.string().optional().default(""),
+  dataTerminoContrato: z.string().optional().default(""),
   tipoContrato: z.string().optional().default("CLT"),
   salarioBase: z.string().optional().default(""),
   dependentes: z.array(dependenteSchema).optional().default([]),

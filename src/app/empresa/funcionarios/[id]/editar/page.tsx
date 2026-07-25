@@ -43,6 +43,7 @@ export default async function EditarFuncionarioPage({
         cargo: funcionario.cargo || "",
         departamento: funcionario.departamento || "",
         dataAdmissao: formatarData(funcionario.dataAdmissao),
+        dataTerminoContrato: formatarData(funcionario.dataTerminoContrato),
         tipoContrato: funcionario.tipoContrato || "CLT",
         salarioBaseCentavos: funcionario.salarioBase ? Math.round(funcionario.salarioBase * 100).toString() : "",
         dependentes,

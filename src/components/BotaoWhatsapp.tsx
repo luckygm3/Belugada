@@ -15,7 +15,7 @@ export function BotaoWhatsapp({
   const classeFixo =
     "fixed bottom-5 right-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-50";
   const classeInline =
-    "inline-flex items-center gap-2 bg-green-500 text-white rounded-md px-4 py-2 text-sm font-medium shadow hover:bg-green-600";
+    "inline-flex items-center gap-2 rounded-pa-md bg-green-600 px-4 py-2 text-body-sm font-medium text-white transition-colors hover:bg-green-700";
 
   return (
     <a

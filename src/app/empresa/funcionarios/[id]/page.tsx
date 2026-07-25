@@ -40,11 +40,14 @@ export default async function FuncionarioDetalhePage({
     <div className="max-w-2xl space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white">{funcionario.nomeCompleto}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">{funcionario.cargo} — CPF {funcionario.cpf}</p>
+          <h1 className="text-h1 text-ink">{funcionario.nomeCompleto}</h1>
+          <p className="text-body-sm text-ink-muted">{funcionario.cargo} — CPF {funcionario.cpf}</p>
         </div>
-        <div className="flex items-center gap-4 shrink-0">
-          <Link href={`/empresa/funcionarios/${funcionario.id}/editar`} className="text-blue-600 hover:underline text-sm">
+        <div className="flex shrink-0 items-center gap-4">
+          <Link
+            href={`/empresa/funcionarios/${funcionario.id}/editar`}
+            className="text-body-sm font-medium text-navy-600 hover:text-navy-700 dark:text-navy-300 dark:hover:text-navy-200 hover:underline"
+          >
             Editar
           </Link>
           <ExcluirFuncionarioButton
