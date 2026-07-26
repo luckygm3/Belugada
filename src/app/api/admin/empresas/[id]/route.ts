@@ -48,6 +48,9 @@ export async function PATCH(
     responsavelCargo,
     responsavelTelefone,
     responsavelEmail,
+    representanteLegalNome,
+    representanteLegalCargo,
+    representanteLegalCpf,
   } = validado.data;
 
   try {
@@ -71,6 +74,9 @@ export async function PATCH(
         responsavelCargo: responsavelCargo || null,
         responsavelTelefone: responsavelTelefone || null,
         responsavelEmail: responsavelEmail || null,
+        representanteLegalNome: representanteLegalNome || null,
+        representanteLegalCargo: representanteLegalCargo || null,
+        representanteLegalCpf: representanteLegalCpf || null,
       },
     });
 

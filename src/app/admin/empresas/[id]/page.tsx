@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import SelecaoTemplatesPadraoForm from "@/components/SelecaoTemplatesPadraoForm";
 import SelecaoTemplatesPersonalizadosForm from "@/components/SelecaoTemplatesPersonalizadosForm";
 import EmpresaDadosForm from "@/components/EmpresaDadosForm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { BadgeStatus } from "@/components/ui/BadgeStatus";
 
 function formatarData(data: Date | null): string {
   if (!data) return "-";
@@ -44,7 +46,7 @@ export default async function EmpresaDetalhePage({
 }) {
   const { id } = await params;
 
-  const [empresa, todosTemplatesPadrao, todosTemplatesPersonalizados] = await Promise.all([
+  const [empresa, todosTemplatesPadrao, todosTemplatesPersonalizados, funcionarios] = await Promise.all([
     prisma.empresa.findUnique({
       where: { id },
       include: {
@@ -61,6 +63,11 @@ export default async function EmpresaDetalhePage({
     prisma.templateDocumento.findMany({
       where: { tipo: "PERSONALIZADO", ativo: true, empresaId: null },
       orderBy: { nome: "asc" },
+    }),
+    prisma.funcionario.findMany({
+      where: { empresaId: id },
+      orderBy: { nomeCompleto: "asc" },
+      select: { id: true, nomeCompleto: true, cargo: true, statusDocumentacao: true },
     }),
   ]);
 
@@ -102,6 +109,9 @@ export default async function EmpresaDetalhePage({
           responsavelCargo: empresa.responsavelCargo || "",
           responsavelTelefone: empresa.responsavelTelefone || "",
           responsavelEmail: empresa.responsavelEmail || "",
+          representanteLegalNome: empresa.representanteLegalNome || "",
+          representanteLegalCargo: empresa.representanteLegalCargo || "",
+          representanteLegalCpf: empresa.representanteLegalCpf || "",
         }}
       />
 
@@ -158,6 +168,44 @@ export default async function EmpresaDetalhePage({
               </table>
             );
           })()}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Funcionários</CardTitle>
+            <Link
+              href={`/admin/empresas/${empresa.id}/funcionarios/novo`}
+              className="shrink-0 text-body-sm font-medium text-navy-600 hover:text-navy-700 dark:text-navy-300 dark:hover:text-navy-200 hover:underline"
+            >
+              + Novo funcionário
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {funcionarios.length === 0 ? (
+            <p className="text-body-sm text-ink-muted">Nenhum funcionário cadastrado ainda.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {funcionarios.map((f) => (
+                <Link
+                  key={f.id}
+                  href={`/admin/empresas/${empresa.id}/funcionarios/${f.id}`}
+                  className="flex items-center justify-between gap-4 py-3 text-body-sm transition-colors hover:bg-surface-alt"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-ink">{f.nomeCompleto}</p>
+                    <p className="text-caption text-ink-muted">{f.cargo || "-"}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <BadgeStatus status={f.statusDocumentacao} />
+                    <span className="text-navy-600 dark:text-navy-300">Ver documentos →</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
