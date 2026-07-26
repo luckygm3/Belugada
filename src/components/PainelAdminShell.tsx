@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 import { TEMA_COOKIE, type Tema } from "@/lib/tema";
+import { NotaFeedbackWidget } from "./NotaFeedbackWidget";
 
 interface TemaContextValue {
   tema: Tema;
@@ -53,7 +54,10 @@ export function PainelAdminShell({ temaInicial, children }: { temaInicial: Tema;
 
   return (
     <TemaContext.Provider value={{ tema, alternar }}>
-      <div className={`painel-admin flex min-h-screen ${tema === "dark" ? "dark" : ""}`}>{children}</div>
+      <div className={`painel-admin flex min-h-screen ${tema === "dark" ? "dark" : ""}`}>
+        {children}
+        <NotaFeedbackWidget />
+      </div>
     </TemaContext.Provider>
   );
 }

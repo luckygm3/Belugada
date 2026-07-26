@@ -27,7 +27,7 @@ export function Sidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="sidebar flex w-56 shrink-0 flex-col p-4">
+    <aside className="sidebar sticky top-0 flex h-screen w-56 shrink-0 flex-col overflow-y-auto p-4">
       <Link href={hrefInicio} className="mb-8 block text-white" aria-label="PACTA — início">
         <PactaLogo variante="horizontal" idPrefix={idPrefix} className="h-7 w-auto" />
       </Link>

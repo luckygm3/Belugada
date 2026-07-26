@@ -11,7 +11,7 @@ import { lerPreferencias } from "@/lib/preferencias";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
 
-  if (!session || session.user.papel !== "ADMIN") {
+  if (!session || session.user.papel !== "ADMIN" || session.error === "SessaoRevogada") {
     redirect("/login");
   }
 
@@ -28,9 +28,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <PainelAdminShell temaInicial={tema}>
       <AdminSidebar />
-      <main className="flex-1 p-8">
-        <Topbar escopo="admin" nomeUsuario={session.user.email ?? "Admin"} />
-        {children}
+      <main className="flex flex-1 justify-center p-8">
+        <div className="w-full max-w-6xl">
+          <Topbar
+            escopo="admin"
+            nomeUsuario={session.user.nome ?? session.user.email ?? "Admin"}
+            avatarUrl={session.user.avatarUrl}
+          />
+          {children}
+        </div>
       </main>
     </PainelAdminShell>
   );

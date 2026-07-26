@@ -7,6 +7,7 @@ import { ThemeToggle } from "./ThemeToggle";
 interface TopbarProps {
   escopo: "admin" | "empresa";
   nomeUsuario: string;
+  avatarUrl?: string | null;
 }
 
 const TRILHAS: Record<string, string[]> = {
@@ -15,8 +16,10 @@ const TRILHAS: Record<string, string[]> = {
   "/admin/empresas/nova": ["Admin", "Empresas", "Nova empresa"],
   "/admin/templates-padrao": ["Admin", "Biblioteca de documentos"],
   "/admin/notificacoes": ["Admin", "Atividades"],
+  "/admin/configuracoes": ["Admin", "Configurações"],
   "/empresa": ["Empresa", "Funcionários"],
   "/empresa/funcionarios/novo": ["Empresa", "Funcionários", "Novo funcionário"],
+  "/empresa/configuracoes": ["Empresa", "Configurações"],
 };
 
 function trilhaPara(pathname: string, escopo: "admin" | "empresa"): string[] {
@@ -27,7 +30,7 @@ function trilhaPara(pathname: string, escopo: "admin" | "empresa"): string[] {
   return escopo === "admin" ? ["Admin"] : ["Empresa"];
 }
 
-export function Topbar({ escopo, nomeUsuario }: TopbarProps) {
+export function Topbar({ escopo, nomeUsuario, avatarUrl }: TopbarProps) {
   const pathname = usePathname();
   const trilha = trilhaPara(pathname, escopo);
   const inicial = (nomeUsuario || "?").trim().charAt(0).toUpperCase();
@@ -47,9 +50,14 @@ export function Topbar({ escopo, nomeUsuario }: TopbarProps) {
         <ThemeToggle />
         <NotificationBell escopo={escopo} />
         <div className="flex items-center gap-2.5 border-l border-border pl-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pa-full bg-navy-700 text-body-sm font-medium text-white">
-            {inicial}
-          </span>
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-pa-full object-cover" />
+          ) : (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pa-full bg-navy-700 text-body-sm font-medium text-white">
+              {inicial}
+            </span>
+          )}
           <span className="hidden max-w-40 truncate text-body-sm text-ink sm:block">{nomeUsuario}</span>
         </div>
       </div>

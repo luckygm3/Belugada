@@ -11,12 +11,13 @@ import { lerPreferencias } from "@/lib/preferencias";
 const LINKS = [
   { href: "/empresa", rotulo: "Funcionários" },
   { href: "/empresa/funcionarios/novo", rotulo: "+ Novo funcionário" },
+  { href: "/empresa/configuracoes", rotulo: "Configurações" },
 ];
 
 export default async function EmpresaLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
 
-  if (!session || session.user.papel !== "EMPRESA") {
+  if (!session || session.user.papel !== "EMPRESA" || session.error === "SessaoRevogada") {
     redirect("/login");
   }
 
@@ -33,9 +34,15 @@ export default async function EmpresaLayout({ children }: { children: React.Reac
   return (
     <PainelAdminShell temaInicial={tema}>
       <Sidebar links={LINKS} hrefInicio="/empresa" idPrefix="empresa-sidebar" />
-      <main className="flex-1 p-8">
-        <Topbar escopo="empresa" nomeUsuario={session.user.email ?? "Empresa"} />
-        {children}
+      <main className="flex flex-1 justify-center p-8">
+        <div className="w-full max-w-6xl">
+          <Topbar
+            escopo="empresa"
+            nomeUsuario={session.user.nome ?? session.user.email ?? "Empresa"}
+            avatarUrl={session.user.avatarUrl}
+          />
+          {children}
+        </div>
       </main>
     </PainelAdminShell>
   );
