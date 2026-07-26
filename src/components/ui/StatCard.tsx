@@ -8,6 +8,7 @@ interface StatCardProps {
   valor: string | number;
   icone: ReactNode;
   tom?: TomStatCard;
+  className?: string;
 }
 
 const CLASSES_POR_TOM: Record<TomStatCard, string> = {
@@ -18,9 +19,9 @@ const CLASSES_POR_TOM: Record<TomStatCard, string> = {
 };
 
 /** Card de resumo/estatística — usado no topo de dashboards e listagens. */
-export function StatCard({ rotulo, valor, icone, tom = "navy" }: StatCardProps) {
+export function StatCard({ rotulo, valor, icone, tom = "navy", className }: StatCardProps) {
   return (
-    <Card className="flex items-start gap-4 p-5">
+    <Card className={`flex items-start gap-4 p-5 ${className ?? ""}`}>
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-pa-md ${CLASSES_POR_TOM[tom]}`}>
         {icone}
       </span>
