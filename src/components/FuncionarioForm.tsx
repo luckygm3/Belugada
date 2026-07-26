@@ -31,6 +31,7 @@ export interface DadosFuncionarioForm {
   rg: string;
   dataNascimento: string;
   estadoCivil: string;
+  nacionalidade: string;
   logradouro: string;
   numero: string;
   bairro: string;
@@ -41,6 +42,8 @@ export interface DadosFuncionarioForm {
   email: string;
   cargo: string;
   departamento: string;
+  ctpsNumero: string;
+  ctpsSerie: string;
   dataAdmissao: string;
   dataTerminoContrato: string;
   tipoContrato: string;
@@ -54,6 +57,7 @@ const dadosVazios: DadosFuncionarioForm = {
   rg: "",
   dataNascimento: "",
   estadoCivil: "",
+  nacionalidade: "",
   logradouro: "",
   numero: "",
   bairro: "",
@@ -64,6 +68,8 @@ const dadosVazios: DadosFuncionarioForm = {
   email: "",
   cargo: "",
   departamento: "",
+  ctpsNumero: "",
+  ctpsSerie: "",
   dataAdmissao: "",
   dataTerminoContrato: "",
   tipoContrato: "CLT",
@@ -75,6 +81,13 @@ interface FuncionarioFormProps {
   modo: "criar" | "editar";
   funcionarioId?: string;
   dadosIniciais?: DadosFuncionarioForm;
+  /**
+   * Presente quando o admin está cadastrando/editando em nome de uma empresa
+   * (ver "Admin operando como empresa"). Ausente = fluxo normal da própria
+   * empresa logada, que nunca manda empresaId — a API sempre usa a da sessão
+   * nesse caso.
+   */
+  empresaId?: string;
 }
 
 interface EtapaInfo {
@@ -137,7 +150,7 @@ function PainelEtapas({ etapaAtual }: { etapaAtual: number }) {
   );
 }
 
-export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: FuncionarioFormProps) {
+export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais, empresaId }: FuncionarioFormProps) {
   const router = useRouter();
   const reduzMovimento = useReducedMotion();
   const dados = dadosIniciais ?? dadosVazios;
@@ -158,6 +171,7 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
   const [rg, setRg] = useState(dados.rg);
   const [dataNascimento, setDataNascimento] = useState(dados.dataNascimento);
   const [estadoCivil, setEstadoCivil] = useState(dados.estadoCivil);
+  const [nacionalidade, setNacionalidade] = useState(dados.nacionalidade);
 
   // Etapa 2 — endereço
   const [cep, setCep] = useState(dados.cep);
@@ -172,6 +186,8 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
   // Etapa 3 — dados trabalhistas
   const [cargo, setCargo] = useState(dados.cargo);
   const [departamento, setDepartamento] = useState(dados.departamento);
+  const [ctpsNumero, setCtpsNumero] = useState(dados.ctpsNumero);
+  const [ctpsSerie, setCtpsSerie] = useState(dados.ctpsSerie);
   const [dataAdmissao, setDataAdmissao] = useState(dados.dataAdmissao);
   const [dataTerminoContrato, setDataTerminoContrato] = useState(dados.dataTerminoContrato);
   const [tipoContrato, setTipoContrato] = useState(dados.tipoContrato);
@@ -275,6 +291,7 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
       rg,
       dataNascimento,
       estadoCivil,
+      nacionalidade,
       logradouro,
       numero,
       bairro,
@@ -285,11 +302,14 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
       email,
       cargo,
       departamento,
+      ctpsNumero,
+      ctpsSerie,
       dataAdmissao,
       dataTerminoContrato,
       tipoContrato,
       salarioBase: salarioBaseCentavos ? (parseInt(salarioBaseCentavos, 10) / 100).toFixed(2) : "",
       dependentes,
+      ...(empresaId ? { empresaId } : {}),
     };
 
     const resultado = funcionarioSchema.safeParse(payload);
@@ -320,7 +340,8 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
       return;
     }
 
-    router.push(modo === "editar" ? `/empresa/funcionarios/${funcionarioId}` : "/empresa");
+    const baseFuncionarios = empresaId ? `/admin/empresas/${empresaId}` : "/empresa";
+    router.push(modo === "editar" ? `${baseFuncionarios}/funcionarios/${funcionarioId}` : baseFuncionarios);
   }
 
   const tituloEtapa = modo === "editar" ? "Editar funcionário" : "Novo funcionário";
@@ -395,6 +416,8 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
                 </select>
               </div>
 
+              <Input label="Nacionalidade" value={nacionalidade} onChange={(e) => setNacionalidade(e.target.value)} />
+
               <div className="flex justify-end">
                 <Button variant="primary" className="text-body-sm" onClick={() => validarEtapa1() && irPara(2)}>
                   Continuar
@@ -458,6 +481,12 @@ export default function FuncionarioForm({ modo, funcionarioId, dadosIniciais }: 
             <Card className="space-y-4 p-6">
               <Input label="Cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} />
               <Input label="Departamento" value={departamento} onChange={(e) => setDepartamento(e.target.value)} />
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="CTPS — número" value={ctpsNumero} onChange={(e) => setCtpsNumero(e.target.value)} />
+                <Input label="CTPS — série" value={ctpsSerie} onChange={(e) => setCtpsSerie(e.target.value)} />
+              </div>
+
               <Input label="Data de admissão" type="date" value={dataAdmissao} onChange={(e) => setDataAdmissao(e.target.value)} />
 
               <div>

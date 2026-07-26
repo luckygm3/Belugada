@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import GerarDocumentosForm from "@/components/GerarDocumentosForm";
 import ExcluirFuncionarioButton from "@/components/ExcluirFuncionarioButton";
+import { ListaDocumentosGerados } from "@/components/documentos/ListaDocumentosGerados";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 
 export default async function FuncionarioDetalhePage({
   params,
@@ -16,24 +18,30 @@ export default async function FuncionarioDetalhePage({
   const funcionario = await prisma.funcionario.findUnique({ where: { id } });
   if (!funcionario || funcionario.empresaId !== session!.user.empresaId) notFound();
 
-  const [templatesPadrao, templatesPersonalizadosBiblioteca, templatesPersonalizadosExclusivos] = await Promise.all([
-    prisma.empresaTemplatePadrao.findMany({
-      where: { empresaId: funcionario.empresaId },
-      include: { template: true },
-    }),
-    prisma.empresaTemplatePersonalizado.findMany({
-      where: { empresaId: funcionario.empresaId },
-      include: { template: true },
-    }),
-    prisma.templateDocumento.findMany({
-      where: { empresaId: funcionario.empresaId, tipo: "PERSONALIZADO", ativo: true },
-    }),
-  ]);
+  const [templatesPadrao, templatesPersonalizadosBiblioteca, templatesPersonalizadosExclusivos, documentosGerados] =
+    await Promise.all([
+      prisma.empresaTemplatePadrao.findMany({
+        where: { empresaId: funcionario.empresaId },
+        include: { template: true },
+      }),
+      prisma.empresaTemplatePersonalizado.findMany({
+        where: { empresaId: funcionario.empresaId },
+        include: { template: true },
+      }),
+      prisma.templateDocumento.findMany({
+        where: { empresaId: funcionario.empresaId, tipo: "PERSONALIZADO", ativo: true },
+      }),
+      prisma.documentoGerado.findMany({
+        where: { funcionarioId: id },
+        orderBy: { dataGeracao: "desc" },
+        include: { template: { select: { nome: true } } },
+      }),
+    ]);
 
   const templatesDisponiveis = [
-    ...templatesPadrao.map((t) => ({ id: t.template.id, nome: t.template.nome })),
-    ...templatesPersonalizadosBiblioteca.map((t) => ({ id: t.template.id, nome: t.template.nome })),
-    ...templatesPersonalizadosExclusivos.map((t) => ({ id: t.id, nome: t.nome })),
+    ...templatesPadrao.map((t) => ({ id: t.template.id, nome: t.template.nome, variaveisDetectadas: t.template.variaveisDetectadas })),
+    ...templatesPersonalizadosBiblioteca.map((t) => ({ id: t.template.id, nome: t.template.nome, variaveisDetectadas: t.template.variaveisDetectadas })),
+    ...templatesPersonalizadosExclusivos.map((t) => ({ id: t.id, nome: t.nome, variaveisDetectadas: t.variaveisDetectadas })),
   ];
 
   return (
@@ -59,6 +67,23 @@ export default async function FuncionarioDetalhePage({
       </div>
 
       <GerarDocumentosForm funcionarioId={funcionario.id} templatesDisponiveis={templatesDisponiveis} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Documentos gerados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ListaDocumentosGerados
+            documentos={documentosGerados.map((d) => ({
+              id: d.id,
+              templateNome: d.template.nome,
+              dataGeracao: d.dataGeracao.toISOString(),
+              dataVencimento: d.dataVencimento ? d.dataVencimento.toISOString() : null,
+            }))}
+            hrefBase="/empresa/documentos"
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

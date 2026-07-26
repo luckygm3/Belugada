@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sanitizarNomeArquivo } from "@/lib/sanitizarNomeArquivo";
+import { registrarEventoAuditoria } from "@/lib/auditoriaDocumento";
+import { podeAgirPelaEmpresa } from "@/lib/autorizacaoEmpresa";
 import JSZip from "jszip";
 
 export async function GET(
@@ -9,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session || session.user.papel !== "EMPRESA") {
+  if (!session) {
     return Response.json({ error: "Não autorizado" }, { status: 403 });
   }
 
@@ -20,7 +22,7 @@ export async function GET(
     include: { documentosGerados: { include: { template: true } } },
   });
 
-  if (!funcionario || funcionario.empresaId !== session.user.empresaId) {
+  if (!funcionario || !podeAgirPelaEmpresa(session, funcionario.empresaId)) {
     return Response.json({ error: "Funcionário não encontrado." }, { status: 404 });
   }
 
@@ -44,6 +46,7 @@ export async function GET(
 
   const zip = new JSZip();
   const nomesUsados = new Set<string>();
+  const documentosIncluidosIds: string[] = [];
 
   for (const documento of documentos) {
     const { data: arquivo, error } = await supabaseAdmin.storage
@@ -64,11 +67,24 @@ export async function GET(
     nomesUsados.add(nomeArquivo);
 
     zip.file(nomeArquivo, await arquivo.arrayBuffer());
+    documentosIncluidosIds.push(documento.id);
   }
 
   if (Object.keys(zip.files).length === 0) {
     return Response.json({ error: "Não foi possível baixar os documentos." }, { status: 500 });
   }
+
+  const usuarioNome = session.user.nome ?? session.user.email ?? null;
+  await Promise.all(
+    documentosIncluidosIds.map((documentoId) =>
+      registrarEventoAuditoria({
+        documentoGeradoId: documentoId,
+        tipo: "DOWNLOAD",
+        usuarioId: session.user.id,
+        usuarioNome,
+      })
+    )
+  );
 
   const bufferZip = await zip.generateAsync({ type: "nodebuffer" });
   const nomeZip = `${sanitizarNomeArquivo(funcionario.nomeCompleto)}-documentos.zip`;

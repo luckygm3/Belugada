@@ -4,17 +4,19 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { funcionarioSchema } from "@/lib/schemas/funcionario";
 import { primeiraMensagemDeErro, mensagensPorCampo } from "@/lib/schemas/comuns";
 import { registrarAtividade } from "@/lib/registrarAtividade";
+import { notificarPorEmail } from "@/lib/notificarPorEmail";
+import { podeAgirPelaEmpresa } from "@/lib/autorizacaoEmpresa";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session || session.user.papel !== "EMPRESA") {
+  if (!session) {
     return Response.json({ error: "Não autorizado" }, { status: 403 });
   }
 
   const { id } = await params;
 
   const funcionarioExistente = await prisma.funcionario.findUnique({ where: { id } });
-  if (!funcionarioExistente || funcionarioExistente.empresaId !== session.user.empresaId) {
+  if (!funcionarioExistente || !podeAgirPelaEmpresa(session, funcionarioExistente.empresaId)) {
     return Response.json({ error: "Funcionário não encontrado." }, { status: 404 });
   }
 
@@ -43,6 +45,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       rg: dados.rg,
       dataNascimento: dados.dataNascimento ? new Date(dados.dataNascimento) : null,
       estadoCivil: dados.estadoCivil,
+      nacionalidade: dados.nacionalidade,
       logradouro: dados.logradouro,
       numero: dados.numero,
       bairro: dados.bairro,
@@ -53,6 +56,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       email: dados.email,
       cargo: dados.cargo,
       departamento: dados.departamento,
+      ctpsNumero: dados.ctpsNumero,
+      ctpsSerie: dados.ctpsSerie,
       dataAdmissao: dados.dataAdmissao ? new Date(dados.dataAdmissao) : null,
       dataTerminoContrato: dados.dataTerminoContrato ? new Date(dados.dataTerminoContrato) : null,
       tipoContrato: dados.tipoContrato,
@@ -61,21 +66,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     },
   });
 
+  const descricaoAtividade = `${dados.nomeCompleto} teve o cadastro atualizado.`;
+
   await registrarAtividade({
     tipo: "EDICAO",
-    descricao: `${dados.nomeCompleto} teve o cadastro atualizado.`,
+    descricao: descricaoAtividade,
     entidade: "Funcionario",
     entidadeId: id,
-    empresaId: session.user.empresaId!,
+    empresaId: funcionarioExistente.empresaId,
     usuarioId: session.user.id,
   });
+  await notificarPorEmail({ tipo: "EDICAO", descricao: descricaoAtividade, empresaId: funcionarioExistente.empresaId });
 
   return Response.json({ funcionarioId: id });
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session || session.user.papel !== "EMPRESA") {
+  if (!session) {
     return Response.json({ error: "Não autorizado" }, { status: 403 });
   }
 
@@ -86,7 +94,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     include: { documentosGerados: true },
   });
 
-  if (!funcionario || funcionario.empresaId !== session.user.empresaId) {
+  if (!funcionario || !podeAgirPelaEmpresa(session, funcionario.empresaId)) {
     return Response.json({ error: "Funcionário não encontrado." }, { status: 404 });
   }
 
@@ -115,14 +123,17 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     prisma.funcionario.delete({ where: { id } }),
   ]);
 
+  const descricaoAtividade = `${funcionario.nomeCompleto} foi excluído.`;
+
   await registrarAtividade({
     tipo: "EXCLUSAO",
-    descricao: `${funcionario.nomeCompleto} foi excluído.`,
+    descricao: descricaoAtividade,
     entidade: "Funcionario",
     entidadeId: id,
-    empresaId: session.user.empresaId!,
+    empresaId: funcionario.empresaId,
     usuarioId: session.user.id,
   });
+  await notificarPorEmail({ tipo: "EXCLUSAO", descricao: descricaoAtividade, empresaId: funcionario.empresaId });
 
   return Response.json({ ok: true });
 }
