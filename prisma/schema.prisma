@@ -50,6 +50,28 @@ model Usuario {
   tokenReset       String?
   tokenResetExpira DateTime?
 
+  // Identidade exibível — coluna própria (não Json) porque é dado estrutural,
+  // não preferência. avatarUrl guarda a URL pública completa do bucket
+  // "avatares" (Storage público), não um caminho relativo como em templates.
+  nome      String?
+  avatarUrl String?
+
+  // false = acesso revogado (checado em authorize(), bloqueia login). Hoje só
+  // a UI de Administração Geral mexe nisso, e só pra papel ADMIN, mas o campo
+  // é genérico — vale pra qualquer papel.
+  ativo Boolean @default(true)
+
+  // 2FA (TOTP) — ver src/lib/doisFatores.ts e src/lib/criptografia.ts.
+  // Segredo criptografado (AES-256-GCM, "iv:tag:ciphertext" em hex), nunca em
+  // texto puro no banco. null = 2FA nunca configurado.
+  totpSecretCriptografado String?
+  totpAtivado             Boolean  @default(false)
+  // Hashes bcrypt dos códigos de backup restantes — mesmo tratamento de
+  // segredo que a senha. Consumidos (removidos do array) no uso.
+  totpCodigosBackup       String[] @default([])
+
+  logsAcesso LogAcesso[]
+
   // Configurações pessoais vinculadas à conta (tema, idioma, filtros salvos...).
   // JSON, não tabela separada: cresce por chave sem migration a cada preferência
   // nova, e ninguém precisa consultar isso além do próprio dono da conta —
@@ -58,6 +80,26 @@ model Usuario {
 
   notificacoes Notificacao[]
   consentimentosCookies ConsentimentoCookies[]
+  sessoesAtivas SessaoAtiva[]
+  notasFeedback NotaFeedback[]
+}
+
+// Sessões ativas por usuário (login JWT sem adapter de banco). Cada login cria
+// um registro; o id deste registro vira o sessionId embutido no JWT e é
+// revalidado (com throttle) no callback jwt do Auth.js — ver src/auth.ts.
+// revogadaEm nulo = sessão válida; preenchido = sessão encerrada remotamente,
+// mantendo histórico em vez de apagar a linha.
+model SessaoAtiva {
+  id         String    @id @default(cuid())
+  usuarioId  String
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  userAgent  String?
+  ip         String?
+  criadoEm   DateTime  @default(now())
+  ultimoUso  DateTime  @default(now())
+  revogadaEm DateTime?
+
+  @@index([usuarioId])
 }
 
 // Registro de auditoria do consentimento de cookies (LGPD) — um registro por
@@ -107,6 +149,13 @@ model Empresa {
   responsavelCargo    String?
   responsavelTelefone String?
   responsavelEmail    String?
+
+  // Representante legal p/ qualificação em documentos (ex: D20) — distinto do
+  // responsavel* acima, que é o contato comercial da empresa-cliente.
+  representanteLegalNome  String?
+  representanteLegalCargo String?
+  representanteLegalCpf   String?
+
   templatesPadraoSelecionados EmpresaTemplatePadrao[]
   templatesPersonalizadosSelecionados EmpresaTemplatePersonalizado[]
 
@@ -195,6 +244,12 @@ model TemplateDocumento {
   variavelVencimento    String?
   diasAlertaVencimento  Int[]      @default([])
 
+  // Vencimento individual, definido no upload — mutuamente exclusivo entre si e
+  // com prioridade sobre variavelVencimento na hora de gerar o documento (ver
+  // resolverDataVencimento em src/lib/obterDataVencimento.ts).
+  vencimentoIndividualData  DateTime?
+  vencimentoIndividualDias  Int?
+
   empresasQueUsam EmpresaTemplatePadrao[]
   empresasQueUsamPersonalizado EmpresaTemplatePersonalizado[]
   documentosGerados   DocumentoGerado[]
@@ -215,6 +270,11 @@ model DocumentoGerado {
   // é um snapshot, não recalculada depois (o documento já foi emitido com essa data).
   dataVencimento      DateTime?
   alertasEnviados     AlertaVencimentoEnviado[]
+
+  // Valores de escopo "documento" (sem origem no Prisma) informados no
+  // formulário de emissão — testemunhas, valores de multa, itens de trajeto
+  // etc. Snapshot: preserva o que foi digitado mesmo se o catálogo mudar depois.
+  dadosEntrada        Json?
 
   @@index([dataVencimento])
 }
@@ -268,4 +328,85 @@ model AlertaVencimentoEnviado {
   enviadoEm         DateTime        @default(now())
 
   @@unique([documentoGeradoId, diasAntecedencia])
+}
+
+// Notas rápidas de feedback ("Notei falta de algo") — captura livre, sem
+// fluxo de resposta nessa fase. `visto` é só pro admin sinalizar o que já foi
+// tratado, sem afetar mais nada no sistema (não é status de workflow).
+model NotaFeedback {
+  id           String   @id @default(cuid())
+  texto        String
+  paginaOrigem String
+  usuarioId    String
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+  visto        Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Configurações globais do sistema — singleton (sempre um único registro, id
+// fixo "global"). Json, não colunas dedicadas: mesmo padrão já usado em
+// Usuario.preferencias — hoje só guarda os prazos de alerta de vencimento,
+// mas Administração Geral é pensada pra crescer com mais ajustes globais sem
+// migration nova — ver src/lib/configuracaoGlobal.ts pro shape validado em Zod.
+model ConfiguracaoGlobal {
+  id        String   @id @default("global")
+  valores   Json?
+  updatedAt DateTime @updatedAt
+}
+
+// Log de login — diferente de Notificacao (atividade de negócio). Guarda só o
+// essencial pra o próprio usuário reconhecer "fui eu que entrei ali": sem
+// geolocalização, sem nada além de IP/user-agent brutos. Não é criado quando
+// o e-mail nem existe no banco (evita ruído de bots e sinal de enumeração).
+model LogAcesso {
+  id          String   @id @default(cuid())
+  usuarioId   String?
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  sucesso     Boolean
+  // "senha_incorreta" | "conta_revogada" | "2fa_invalido" | null quando sucesso
+  motivoFalha String?
+  userAgent   String?
+  ip          String?
+  criadoEm    DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([criadoEm])
+}
+
+enum TipoEventoAuditoria {
+  GERACAO
+  DOWNLOAD
+  SUBSTITUIDO
+}
+
+// Trilha de auditoria por documento gerado — append-only por design: sem
+// endpoint de update/delete em nenhum lugar da aplicação (documentos podem
+// virar prova em relação de trabalho). documentoGeradoId e usuarioId são
+// referências informativas (sem @relation), mesmo padrão de
+// Notificacao.entidade/entidadeId — a trilha precisa sobreviver mesmo se o
+// documento ou o usuário forem removidos depois (uma FK real com cascade
+// apagaria a prova junto; sem cascade, bloquearia pra sempre a exclusão de
+// um funcionário que já gerou qualquer documento).
+model AuditoriaDocumento {
+  id                String              @id @default(cuid())
+  documentoGeradoId String
+  tipo              TipoEventoAuditoria
+  usuarioId         String?
+  usuarioNome       String?
+  criadoEm          DateTime            @default(now())
+
+  // Só em tipo = GERACAO — snapshot completo pra reconstituir o contexto da
+  // geração mesmo que os dados do funcionário ou o template mudem depois.
+  templateId      String?
+  templateNome    String?
+  templateHash    String? // sha256 do conteúdo do template usado nessa geração
+  variaveisUsadas Json?   // saída de mapearVariaveis() naquele momento
+
+  // Só em tipo = SUBSTITUIDO — aponta pro documento novo que passou a valer.
+  documentoSubstitutoId String?
+
+  @@index([documentoGeradoId])
+  @@index([criadoEm])
 }
