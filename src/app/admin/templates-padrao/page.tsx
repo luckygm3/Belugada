@@ -17,6 +17,8 @@ export default async function TemplatesPadraoPage() {
     variaveisDetectadas: t.variaveisDetectadas,
     variavelVencimento: t.variavelVencimento,
     diasAlertaVencimento: t.diasAlertaVencimento,
+    vencimentoIndividualData: t.vencimentoIndividualData?.toISOString() ?? null,
+    vencimentoIndividualDias: t.vencimentoIndividualDias,
     createdAt: t.createdAt.toISOString(),
     empresa: t.empresa ? { razaoSocial: t.empresa.razaoSocial } : null,
   }));

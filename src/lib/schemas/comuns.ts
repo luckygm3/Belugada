@@ -23,6 +23,12 @@ export const cpfSchema = z
     message: "CPF inválido (dígito verificador não confere).",
   });
 
+// Campo opcional: string vazia é um valor válido; se algo for digitado, precisa ser um CPF válido.
+export const cpfOpcionalSchema = z
+  .string()
+  .transform(somenteDigitos)
+  .refine((v) => v === "" || (v.length === 11 && validarCPF(v)), { message: "CPF inválido." });
+
 // Campos opcionais: string vazia é um valor válido (campo não preenchido);
 // se algo for digitado, precisa respeitar o formato.
 export const telefoneOpcionalSchema = z

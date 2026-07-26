@@ -27,6 +27,9 @@ export interface DadosEmpresaEditaveis {
   responsavelCargo: string;
   responsavelTelefone: string;
   responsavelEmail: string;
+  representanteLegalNome: string;
+  representanteLegalCargo: string;
+  representanteLegalCpf: string;
 }
 
 const ROTULO_PLANO: Record<string, string> = {
@@ -278,6 +281,21 @@ export default function EmpresaDadosForm({
           <CampoTexto label="Cargo" editando={editando} {...campoProps("responsavelCargo")} />
           <CampoTexto label="Telefone" editando={editando} {...campoProps("responsavelTelefone")} />
           <CampoTexto label="E-mail" editando={editando} {...campoProps("responsavelEmail")} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Representante legal</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4">
+          <p className="col-span-2 text-body-sm text-ink-muted">
+            Usado na qualificação de documentos que citam o representante legal infra-assinado — diferente do
+            responsável comercial acima.
+          </p>
+          <CampoTexto label="Nome" editando={editando} {...campoProps("representanteLegalNome")} />
+          <CampoTexto label="Cargo" editando={editando} {...campoProps("representanteLegalCargo")} />
+          <CampoTexto label="CPF" editando={editando} {...campoProps("representanteLegalCpf")} />
         </CardContent>
       </Card>
     </div>

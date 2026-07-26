@@ -12,9 +12,21 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const arquivo = formData.get("arquivo") as File | null;
   const nome = formData.get("nome") as string | null;
+  const vencimentoData = formData.get("vencimentoIndividualData") as string | null;
+  const vencimentoDiasRaw = formData.get("vencimentoIndividualDias") as string | null;
 
   if (!arquivo || !nome) {
     return Response.json({ error: "Arquivo e nome são obrigatórios." }, { status: 400 });
+  }
+
+  // Mutuamente exclusivos — se os dois vierem preenchidos (não deveria acontecer
+  // pela UI), a data fixa vence.
+  const vencimentoIndividualData = vencimentoData ? new Date(`${vencimentoData}T00:00:00.000Z`) : null;
+  const vencimentoIndividualDias =
+    !vencimentoIndividualData && vencimentoDiasRaw ? Number(vencimentoDiasRaw) : null;
+
+  if (vencimentoIndividualDias != null && (!Number.isInteger(vencimentoIndividualDias) || vencimentoIndividualDias <= 0)) {
+    return Response.json({ error: "Prazo de vencimento inválido — use um número inteiro de dias maior que zero." }, { status: 400 });
   }
 
   if (!arquivo.name.endsWith(".docx")) {
@@ -52,6 +64,8 @@ export async function POST(req: Request) {
       arquivoOriginalUrl: caminhoArquivo,
       variaveisDetectadas,
       ativo: true,
+      vencimentoIndividualData,
+      vencimentoIndividualDias,
     },
   });
 

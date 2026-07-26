@@ -10,7 +10,7 @@ export interface TipTapNode {
 }
 
 interface DadosGeracao {
-  [key: string]: string | number | undefined
+  [key: string]: unknown
 }
 
 export function renderizarTemplateEditor(

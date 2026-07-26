@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { registrarAtividade } from "@/lib/registrarAtividade";
-import { DIAS_ALERTA_PADRAO, descricaoPrazo } from "@/lib/vencimentos";
+import { notificarPorEmail } from "@/lib/notificarPorEmail";
+import { descricaoPrazo } from "@/lib/vencimentos";
+import { lerDiasAlertaPadrao } from "@/lib/configuracaoGlobal";
 import { Prisma } from "@prisma/client";
 
 // Disparado diariamente pelo Vercel Cron (vercel.json). Vercel injeta o header
@@ -14,6 +16,8 @@ export async function GET(req: Request) {
   if (!autorizado(req)) {
     return Response.json({ error: "Não autorizado" }, { status: 401 });
   }
+
+  const diasAlertaPadrao = await lerDiasAlertaPadrao();
 
   const documentos = await prisma.documentoGerado.findMany({
     where: { dataVencimento: { not: null } },
@@ -38,7 +42,7 @@ export async function GET(req: Request) {
 
     const marcos = doc.template.diasAlertaVencimento.length > 0
       ? doc.template.diasAlertaVencimento
-      : DIAS_ALERTA_PADRAO;
+      : diasAlertaPadrao;
     const jaEnviados = new Set(doc.alertasEnviados.map((a) => a.diasAntecedencia));
     const marcosOrdenados = [...marcos].sort((a, b) => b - a);
 
@@ -56,13 +60,20 @@ export async function GET(req: Request) {
         throw err;
       }
 
+      const descricaoAtividade = `${doc.template.nome} de ${doc.funcionario.nomeCompleto} ${descricaoPrazo(diasRestantes)} (${vencimento.toLocaleDateString("pt-BR")}).`;
+
       await registrarAtividade({
         tipo: "VENCIMENTO_PROXIMO",
-        descricao: `${doc.template.nome} de ${doc.funcionario.nomeCompleto} ${descricaoPrazo(diasRestantes)} (${vencimento.toLocaleDateString("pt-BR")}).`,
+        descricao: descricaoAtividade,
         entidade: "DocumentoGerado",
         entidadeId: doc.id,
         empresaId: doc.funcionario.empresaId,
         diasAntecedencia: marco,
+      });
+      await notificarPorEmail({
+        tipo: "VENCIMENTO_PROXIMO",
+        descricao: descricaoAtividade,
+        empresaId: doc.funcionario.empresaId,
       });
       notificacoesCriadas++;
     }

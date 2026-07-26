@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cnpjSchema, telefoneOpcionalSchema, cepOpcionalSchema, emailOpcionalSchema } from "./comuns";
+import { cnpjSchema, telefoneOpcionalSchema, cepOpcionalSchema, emailOpcionalSchema, cpfOpcionalSchema } from "./comuns";
 
 const textoOpcional = z.string().optional().default("");
 
@@ -67,7 +67,30 @@ export const empresaEdicaoSchema = z.object({
   responsavelCargo: textoOpcional,
   responsavelTelefone: telefoneOpcionalSchema,
   responsavelEmail: emailOpcionalSchema,
+  representanteLegalNome: textoOpcional,
+  representanteLegalCargo: textoOpcional,
+  representanteLegalCpf: cpfOpcionalSchema,
+});
+
+// Usado pela própria empresa-cliente em Configurações (PATCH /api/empresa/dados) —
+// subconjunto de empresaEdicaoSchema: só campos não-sensíveis (endereço, telefone,
+// responsável). razaoSocial/nomeFantasia/emailCorporativo/planoContratado/
+// statusPagamento continuam só-leitura pra empresa, editáveis só pelo admin.
+export const empresaAutoEdicaoSchema = empresaEdicaoSchema.pick({
+  logradouro: true,
+  numero: true,
+  complemento: true,
+  bairro: true,
+  cidade: true,
+  uf: true,
+  cep: true,
+  telefone: true,
+  responsavelNome: true,
+  responsavelCargo: true,
+  responsavelTelefone: true,
+  responsavelEmail: true,
 });
 
 export type EmpresaCadastroInput = z.infer<typeof empresaCadastroSchema>;
 export type EmpresaEdicaoInput = z.infer<typeof empresaEdicaoSchema>;
+export type EmpresaAutoEdicaoInput = z.infer<typeof empresaAutoEdicaoSchema>;

@@ -6,8 +6,19 @@ import { ProgressBar } from "./ui/ProgressBar";
 import { Button } from "./ui/Button";
 
 type Fase = "ocioso" | "selecionado" | "enviando" | "sucesso" | "erro";
+type TipoVencimento = "nenhum" | "data" | "prazo";
 
 const EXTENSAO_VALIDA = ".docx";
+
+export interface VencimentoIndividual {
+  tipo: TipoVencimento;
+  /** ISO yyyy-mm-dd, só quando tipo === "data" */
+  data: string;
+  /** dias a partir da geração do documento, só quando tipo === "prazo" */
+  dias: string;
+}
+
+const VENCIMENTO_VAZIO: VencimentoIndividual = { tipo: "nenhum", data: "", dias: "" };
 
 function validarArquivo(arquivo: File): string | null {
   if (!arquivo.name.toLowerCase().endsWith(EXTENSAO_VALIDA)) {
@@ -86,7 +97,11 @@ export interface UploadTemplateDropzoneProps {
    * mensagem de erro. Ainda não fornecida pela biblioteca de templates —
    * a integração real fica pro caller passar essa função depois.
    */
-  aoEnviar?: (arquivo: File, aoProgredir: (percentual: number) => void) => Promise<void>;
+  aoEnviar?: (
+    arquivo: File,
+    vencimento: VencimentoIndividual,
+    aoProgredir: (percentual: number) => void
+  ) => Promise<void>;
   className?: string;
 }
 
@@ -106,6 +121,7 @@ export function UploadTemplateDropzone({ aoEnviar, className }: UploadTemplateDr
   const [progresso, setProgresso] = useState(0);
   const [erroValidacao, setErroValidacao] = useState("");
   const [erroUpload, setErroUpload] = useState("");
+  const [vencimento, setVencimento] = useState<VencimentoIndividual>(VENCIMENTO_VAZIO);
 
   function processarArquivo(novoArquivo: File) {
     const erro = validarArquivo(novoArquivo);
@@ -136,6 +152,7 @@ export function UploadTemplateDropzone({ aoEnviar, className }: UploadTemplateDr
     setFase("ocioso");
     setProgresso(0);
     setErroUpload("");
+    setVencimento(VENCIMENTO_VAZIO);
   }
 
   async function iniciarEnvio() {
@@ -151,7 +168,7 @@ export function UploadTemplateDropzone({ aoEnviar, className }: UploadTemplateDr
     }
 
     try {
-      await aoEnviar(arquivo, setProgresso);
+      await aoEnviar(arquivo, vencimento, setProgresso);
       setFase("sucesso");
     } catch (e) {
       setErroUpload(e instanceof Error ? e.message : "Erro ao enviar o arquivo.");
@@ -245,6 +262,51 @@ export function UploadTemplateDropzone({ aoEnviar, className }: UploadTemplateDr
             <p role="alert" className="mt-2 text-caption text-red-600">
               {erroUpload}
             </p>
+          )}
+
+          {fase === "selecionado" && (
+            <div className="mt-4 border-t border-border pt-3">
+              <label htmlFor={`${idInput}-vencimento`} className="text-label text-ink-muted">
+                Vencimento deste documento (opcional)
+              </label>
+              <p className="mt-0.5 text-caption text-ink-muted">
+                Deixe em branco se o documento não tiver validade. Se definido aqui, vale pra este documento
+                mesmo que o tipo tenha uma configuração de prazo padrão.
+              </p>
+              <select
+                id={`${idInput}-vencimento`}
+                value={vencimento.tipo}
+                onChange={(e) => setVencimento((v) => ({ ...v, tipo: e.target.value as TipoVencimento }))}
+                className="mt-2 rounded-pa-md border border-border bg-surface px-3 py-2 text-body-sm text-ink"
+              >
+                <option value="nenhum">Sem vencimento</option>
+                <option value="data">Data específica</option>
+                <option value="prazo">Prazo em dias após a geração</option>
+              </select>
+
+              {vencimento.tipo === "data" && (
+                <input
+                  type="date"
+                  value={vencimento.data}
+                  onChange={(e) => setVencimento((v) => ({ ...v, data: e.target.value }))}
+                  className="mt-2 block rounded-pa-md border border-border bg-surface px-3 py-2 text-body-sm text-ink"
+                />
+              )}
+
+              {vencimento.tipo === "prazo" && (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={vencimento.dias}
+                    onChange={(e) => setVencimento((v) => ({ ...v, dias: e.target.value }))}
+                    placeholder="Ex: 365"
+                    className="w-28 rounded-pa-md border border-border bg-surface px-3 py-2 text-body-sm text-ink"
+                  />
+                  <span className="text-body-sm text-ink-muted">dias</span>
+                </div>
+              )}
+            </div>
           )}
 
           {fase === "selecionado" && (

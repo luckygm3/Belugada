@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/Card";
 import { Button } from "./ui/Button";
-import { UploadTemplateDropzone } from "./UploadTemplateDropzone";
+import { BuscaInput } from "./ui/BuscaInput";
+import { UploadTemplateDropzone, type VencimentoIndividual } from "./UploadTemplateDropzone";
 import { ConfigurarVencimentoModal } from "./ConfigurarVencimentoModal";
+import { contemBusca } from "@/lib/normalizarTexto";
 
 export interface TemplateBiblioteca {
   id: string;
@@ -17,6 +19,8 @@ export interface TemplateBiblioteca {
   variaveisDetectadas: string[];
   variavelVencimento: string | null;
   diasAlertaVencimento: number[];
+  vencimentoIndividualData: string | null; // ISO
+  vencimentoIndividualDias: number | null;
   createdAt: string; // ISO — serializado do server component
   empresa: { razaoSocial: string } | null;
 }
@@ -207,6 +211,24 @@ function DistintivoVencimento({ variavel }: { variavel: string | null }) {
   );
 }
 
+function DistintivoVencimentoIndividual({ t }: { t: TemplateBiblioteca }) {
+  if (t.vencimentoIndividualData) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-pa-full bg-amber-50 px-2 py-0.5 text-caption font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+        Vence em: {formatarData(t.vencimentoIndividualData)}
+      </span>
+    );
+  }
+  if (t.vencimentoIndividualDias) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-pa-full bg-amber-50 px-2 py-0.5 text-caption font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+        Vence {t.vencimentoIndividualDias} dia(s) após gerado
+      </span>
+    );
+  }
+  return null;
+}
+
 interface AcoesTemplate {
   aoBaixar: () => void;
   aoRemover: () => void;
@@ -223,7 +245,11 @@ function CartaoTemplate({ t, aoBaixar, aoRemover, aoConfigurarVencimento }: { t:
       <p className="mt-3 line-clamp-2 text-body font-medium text-ink">{t.nome}</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Distintivo tipo={t.tipo} />
-        <DistintivoVencimento variavel={t.variavelVencimento} />
+        {t.vencimentoIndividualData || t.vencimentoIndividualDias ? (
+          <DistintivoVencimentoIndividual t={t} />
+        ) : (
+          <DistintivoVencimento variavel={t.variavelVencimento} />
+        )}
       </div>
       <div className="mt-auto flex flex-col gap-1 pt-4 text-body-sm text-ink-muted">
         <span>{formatarData(t.createdAt)}</span>
@@ -243,7 +269,11 @@ function LinhaTemplate({ t, aoBaixar, aoRemover, aoConfigurarVencimento }: { t: 
       )}
       <p className="min-w-0 flex-1 truncate text-body font-medium text-ink">{t.nome}</p>
       <Distintivo tipo={t.tipo} />
-      <DistintivoVencimento variavel={t.variavelVencimento} />
+      {t.vencimentoIndividualData || t.vencimentoIndividualDias ? (
+        <DistintivoVencimentoIndividual t={t} />
+      ) : (
+        <DistintivoVencimento variavel={t.variavelVencimento} />
+      )}
       <span className="w-24 shrink-0 text-body-sm text-ink-muted">{formatarData(t.createdAt)}</span>
       <span className="w-40 shrink-0 truncate text-body-sm text-ink-muted">{t.empresa?.razaoSocial ?? "—"}</span>
       <MenuAcoes acoes={acoesPara(t, aoBaixar, aoRemover, aoConfigurarVencimento)} />
@@ -257,6 +287,12 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
   const [templates, setTemplates] = useState(templatesIniciais);
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("grid");
   const [templateConfigurando, setTemplateConfigurando] = useState<TemplateBiblioteca | null>(null);
+  const [busca, setBusca] = useState("");
+
+  const templatesFiltrados = useMemo(
+    () => templates.filter((t) => contemBusca(t.nome, busca)),
+    [templates, busca]
+  );
 
   useEffect(() => {
     const salva = sessionStorage.getItem(CHAVE_SESSAO);
@@ -271,11 +307,20 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
     sessionStorage.setItem(CHAVE_SESSAO, nova);
   }
 
-  async function enviarTemplatePadrao(arquivo: File, aoProgredir: (percentual: number) => void) {
+  async function enviarTemplatePadrao(
+    arquivo: File,
+    vencimento: VencimentoIndividual,
+    aoProgredir: (percentual: number) => void
+  ) {
     const nome = arquivo.name.replace(/\.docx$/i, "");
     const formData = new FormData();
     formData.append("nome", nome);
     formData.append("arquivo", arquivo);
+    if (vencimento.tipo === "data" && vencimento.data) {
+      formData.append("vencimentoIndividualData", vencimento.data);
+    } else if (vencimento.tipo === "prazo" && vencimento.dias) {
+      formData.append("vencimentoIndividualDias", vencimento.dias);
+    }
 
     const { template } = await enviarViaXhr("/api/admin/templates-padrao", formData, aoProgredir);
     setTemplates((atual) => [template, ...atual]);
@@ -341,6 +386,14 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
           </button>
         </div>
 
+        <BuscaInput
+          value={busca}
+          onChange={setBusca}
+          placeholder="Buscar por nome..."
+          aria-label="Buscar template"
+          className="max-w-sm flex-1"
+        />
+
         <Button variant="secondary" className="text-body-sm" onClick={() => router.push("/admin/templates-personalizados/novo")}>
           + Criar no editor
         </Button>
@@ -350,9 +403,13 @@ export function BibliotecaTemplates({ templatesIniciais }: { templatesIniciais: 
         <p className="rounded-pa-lg border border-dashed border-border bg-surface-alt p-8 text-center text-body-sm text-ink-muted">
           Nenhum template ainda. Envie um arquivo .docx acima ou crie um pelo editor.
         </p>
+      ) : templatesFiltrados.length === 0 ? (
+        <p className="rounded-pa-lg border border-dashed border-border bg-surface-alt p-8 text-center text-body-sm text-ink-muted">
+          Nenhum template encontrado para &quot;{busca}&quot;.
+        </p>
       ) : (
         <div className={visualizacao === "grid" ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-2"}>
-          {templates.map((t) => (
+          {templatesFiltrados.map((t) => (
             <motion.div key={t.id} layout transition={{ duration: reduzMovimento ? 0 : 0.3, ease: "easeOut" }}>
               {visualizacao === "grid" ? (
                 <CartaoTemplate
